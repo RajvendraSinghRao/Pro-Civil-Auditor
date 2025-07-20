@@ -2,129 +2,194 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Multi-Area Calculator (Feet-Inch)</title>
+  <title>Named Multi-Area Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      max-width: 500px;
-      margin: 30px auto;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
       padding: 20px;
-      border: 2px solid #444;
-      border-radius: 10px;
-      background-color: #f9f9f9;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 15px;
     }
     input {
-      width: 95%;
+      width: 100%;
       padding: 10px;
-      font-size: 16px;
+      font-size: 15px;
       margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
     }
     button {
-      padding: 8px 16px;
-      font-size: 16px;
-      margin: 5px 5px 10px 0;
-    }
-    .entry {
-      margin: 10px 0;
-      padding: 8px;
-      background: #e6e6e6;
-      border-radius: 5px;
-    }
-    #total {
-      margin-top: 20px;
-      font-weight: bold;
-      background: #d0ffd0;
+      flex: 1 1 48%;
       padding: 10px;
+      font-size: 15px;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      border: none;
       border-radius: 5px;
+    }
+    .entry, .group-total {
+      font-size: 16px;
+      background-color: #e6e6e6;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    .group-total {
+      background-color: #c9fbc9;
+      font-weight: bold;
+    }
+    @media (max-width: 500px) {
+      button {
+        flex: 1 1 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>Multi-Area Calculator (e.g. 5'6 × 4'4)</h2>
+  <div class="container">
+    <h2>Multi-Area Calculator with Labels</h2>
 
-  <input type="text" id="dimensionInput" placeholder="Type like 5'6 × 4'4" />
-  <br>
-  <button onclick="addArea()">Calculate</button>
-  <button onclick="resetCalculator()">Reset</button>
-  <button onclick="exportToPDF()">Export to PDF</button>
+    <input type="text" id="areaName" placeholder="Enter area name (e.g. Kitchen)" />
+    <input type="text" id="dimensionInput" placeholder="Enter size like 5'6 × 4'4" />
 
-  <div id="entries"></div>
-  <div id="total"></div>
+    <div class="buttons">
+      <button onclick="addArea()">Calculate</button>
+      <button onclick="resetEntries()">Reset Entry</button>
+      <button onclick="groupTotal()">Group Total</button>
+      <button onclick="exportToPDF()">Export to PDF</button>
+    </div>
+
+    <input type="text" id="groupName" placeholder="Enter group total name (e.g. Flat A)" />
+
+    <div id="entries"></div>
+    <div id="groups"></div>
+  </div>
 
   <script>
-    let totalSqInches = 0;
-    let count = 0;
-    const entries = [];
+    let currentEntries = [];
+    let currentTotalInches = 0;
+    let entryCount = 0;
+    const allGroups = [];
 
     function parseFeetInch(value) {
       const [feet, inch] = value.split("'").map(v => parseFloat(v.trim()) || 0);
-      return (feet * 12) + inch; // return in inches
+      return (feet * 12) + inch;
     }
 
     function addArea() {
-      const input = document.getElementById("dimensionInput").value;
-      const parts = input.toLowerCase().split("×");
+      const name = document.getElementById("areaName").value.trim() || `Area ${entryCount + 1}`;
+      const dimension = document.getElementById("dimensionInput").value.trim();
 
+      const parts = dimension.toLowerCase().split("×");
       if (parts.length !== 2) {
         alert("❌ Invalid format. Use: 5'6 × 4'4");
         return;
       }
 
-      const lengthInInches = parseFeetInch(parts[0]);
-      const widthInInches = parseFeetInch(parts[1]);
-      const areaSqInches = lengthInInches * widthInInches;
+      const length = parseFeetInch(parts[0]);
+      const width = parseFeetInch(parts[1]);
+      const areaSqInches = length * width;
       const areaSqFeet = areaSqInches / 144;
 
-      totalSqInches += areaSqInches;
-      count++;
+      entryCount++;
+      currentTotalInches += areaSqInches;
 
-      const entryText = `#${count}) ${parts[0].trim()} × ${parts[1].trim()} = ${areaSqFeet.toFixed(2)} sq. ft (${areaSqInches.toFixed(2)} sq. in)`;
-      entries.push(entryText);
+      const entryText = `#${entryCount}) ${name} (${parts[0].trim()} × ${parts[1].trim()}) = ${areaSqFeet.toFixed(2)} sq. ft (${areaSqInches.toFixed(2)} sq. in)`;
+      currentEntries.push(entryText);
 
-      const entry = document.createElement("div");
-      entry.className = "entry";
-      entry.innerText = entryText;
-      document.getElementById("entries").appendChild(entry);
+      const entryDiv = document.createElement("div");
+      entryDiv.className = "entry";
+      entryDiv.innerText = entryText;
+      document.getElementById("entries").appendChild(entryDiv);
 
-      const totalSqFeet = totalSqInches / 144;
-      document.getElementById("total").innerHTML =
-        `🧮 Total Area = ${totalSqFeet.toFixed(2)} sq. ft 
-        (${totalSqInches.toFixed(2)} sq. in)`;
-
+      document.getElementById("areaName").value = "";
       document.getElementById("dimensionInput").value = "";
     }
 
-    function resetCalculator() {
-      totalSqInches = 0;
-      count = 0;
-      entries.length = 0;
+    function resetEntries() {
+      currentEntries = [];
+      currentTotalInches = 0;
+      entryCount = 0;
       document.getElementById("entries").innerHTML = "";
-      document.getElementById("total").innerHTML = "";
-      document.getElementById("dimensionInput").value = "";
+    }
+
+    function groupTotal() {
+      if (currentEntries.length === 0) {
+        alert("Please add areas before grouping.");
+        return;
+      }
+
+      const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
+      const totalFeet = currentTotalInches / 144;
+
+      const groupDiv = document.createElement("div");
+      groupDiv.className = "group-total";
+
+      groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
+        currentEntries.join("<br>") +
+        `<br>🧮 <strong>Total = ${totalFeet.toFixed(2)} sq. ft (${currentTotalInches.toFixed(2)} sq. in)</strong>`;
+
+      document.getElementById("groups").appendChild(groupDiv);
+
+      allGroups.push({
+        name: groupName,
+        entries: [...currentEntries],
+        totalInches: currentTotalInches
+      });
+
+      // Reset current session
+      resetEntries();
+      document.getElementById("groupName").value = "";
     }
 
     function exportToPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
+      let y = 20;
 
-      doc.setFontSize(14);
-      doc.text("Multi-Area Calculator Summary", 20, 20);
+      doc.setFontSize(16);
+      doc.text("Multi-Area Calculation Summary", 20, y);
+      y += 10;
 
-      let y = 30;
-      entries.forEach(entry => {
-        doc.text(entry, 20, y);
+      allGroups.forEach((group, index) => {
+        doc.setFontSize(14);
+        doc.text(`Group ${index + 1}: ${group.name}`, 20, y);
         y += 10;
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
+        group.entries.forEach(entry => {
+          doc.setFontSize(12);
+          doc.text(`- ${entry}`, 25, y);
+          y += 8;
+          if (y > 270) { doc.addPage(); y = 20; }
+        });
+        doc.setFontSize(13);
+        const totalFt = (group.totalInches / 144).toFixed(2);
+        doc.text(`= Total: ${totalFt} sq. ft (${group.totalInches.toFixed(2)} sq. in)`, 25, y);
+        y += 12;
+        if (y > 270) { doc.addPage(); y = 20; }
       });
 
-      const totalText = `Total Area = ${(totalSqInches / 144).toFixed(2)} sq. ft (${totalSqInches.toFixed(2)} sq. in)`;
-      doc.text(totalText, 20, y + 10);
-
-      doc.save("Area-Summary.pdf");
+      doc.save("Multi-Area-Summary.pdf");
     }
   </script>
 </body>
