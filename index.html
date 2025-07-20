@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-Area Calculator (Feet-Inch)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 30px auto;
+      padding: 20px;
+      border: 2px solid #444;
+      border-radius: 10px;
+      background-color: #f9f9f9;
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin: 5px 5px 10px 0;
+    }
+    .entry {
+      margin: 10px 0;
+      padding: 8px;
+      background: #e6e6e6;
+      border-radius: 5px;
+    }
+    #total {
+      margin-top: 20px;
+      font-weight: bold;
+      background: #d0ffd0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Multi-Area Calculator (e.g. 5'6 × 4'4)</h2>
+
+  <input type="text" id="dimensionInput" placeholder="Type like 5'6 × 4'4" />
+  <br>
+  <button onclick="addArea()">Calculate</button>
+  <button onclick="resetCalculator()">Reset</button>
+  <button onclick="exportToPDF()">Export to PDF</button>
+
+  <div id="entries"></div>
+  <div id="total"></div>
+
+  <script>
+    let totalSqInches = 0;
+    let count = 0;
+    const entries = [];
+
+    function parseFeetInch(value) {
+      const [feet, inch] = value.split("'").map(v => parseFloat(v.trim()) || 0);
+      return (feet * 12) + inch; // return in inches
+    }
+
+    function addArea() {
+      const input = document.getElementById("dimensionInput").value;
+      const parts = input.toLowerCase().split("×");
+
+      if (parts.length !== 2) {
+        alert("❌ Invalid format. Use: 5'6 × 4'4");
+        return;
+      }
+
+      const lengthInInches = parseFeetInch(parts[0]);
+      const widthInInches = parseFeetInch(parts[1]);
+      const areaSqInches = lengthInInches * widthInInches;
+      const areaSqFeet = areaSqInches / 144;
+
+      totalSqInches += areaSqInches;
+      count++;
+
+      const entryText = `#${count}) ${parts[0].trim()} × ${parts[1].trim()} = ${areaSqFeet.toFixed(2)} sq. ft (${areaSqInches.toFixed(2)} sq. in)`;
+      entries.push(entryText);
+
+      const entry = document.createElement("div");
+      entry.className = "entry";
+      entry.innerText = entryText;
+      document.getElementById("entries").appendChild(entry);
+
+      const totalSqFeet = totalSqInches / 144;
+      document.getElementById("total").innerHTML =
+        `🧮 Total Area = ${totalSqFeet.toFixed(2)} sq. ft 
+        (${totalSqInches.toFixed(2)} sq. in)`;
+
+      document.getElementById("dimensionInput").value = "";
+    }
+
+    function resetCalculator() {
+      totalSqInches = 0;
+      count = 0;
+      entries.length = 0;
+      document.getElementById("entries").innerHTML = "";
+      document.getElementById("total").innerHTML = "";
+      document.getElementById("dimensionInput").value = "";
+    }
+
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text("Multi-Area Calculator Summary", 20, 20);
+
+      let y = 30;
+      entries.forEach(entry => {
+        doc.text(entry, 20, y);
+        y += 10;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      const totalText = `Total Area = ${(totalSqInches / 144).toFixed(2)} sq. ft (${totalSqInches.toFixed(2)} sq. in)`;
+      doc.text(totalText, 20, y + 10);
+
+      doc.save("Area-Summary.pdf");
+    }
+  </script>
+</body>
+</html>
