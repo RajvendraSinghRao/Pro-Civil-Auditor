@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Advanced Area Calculator</title>
+  <title>Pro Civil Auditor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -141,7 +141,6 @@
       <button onclick="evaluateExpression()">Calculate</button>
       <button onclick="resetEntries()">Reset Entry</button>
       <button onclick="groupTotal()">Group Total</button>
-      
       <div class="export-dropdown">
         <button onclick="toggleExportDropdown()" id="exportBtn">Export ▼</button>
         <div id="exportDropdown" class="export-dropdown-menu">
@@ -149,7 +148,6 @@
           <div onclick="exportToExcel()">📊 Export as Excel (.xlsx)</div>
         </div>
       </div>
-
       <button onclick="resetAll()">Reset All</button>
     </div>
 
@@ -275,7 +273,7 @@
       doc.setFontSize(16);
       doc.text("Pro Civil Auditor", 20, y);
       y += 10;
-      allGroups.forEach((group, index) => {
+      allGroups.forEach((group) => {
         doc.setFontSize(14);
         doc.text(`${group.name}`, 20, y);
         y += 10;
@@ -294,13 +292,23 @@
     }
 
     function exportToExcel() {
+      if (allGroups.length === 0) {
+        alert("⚠️ No group data to export.");
+        return;
+      }
+
       const wb = XLSX.utils.book_new();
+      const data = [];
+
       allGroups.forEach(group => {
-        const data = group.entries.map(entry => [entry]);
+        data.push([`${group.name}`]);
+        group.entries.forEach(entry => data.push([entry]));
         data.push([`Total = ${convertFromInches(group.totalInches)}`]);
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, ws, group.name.substring(0, 31));
+        data.push(['']);
       });
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "All Groups");
       XLSX.writeFile(wb, "Pro Civil Auditor.xlsx");
     }
 
