@@ -102,7 +102,7 @@
   <div class="container">
     <h2>Pro Civil Auditor</h2>
 
-    <input type="text" id="expressionInput" placeholder="Enter expression (e.g. 5'×'4×2 + Flat A - '3×2')" />
+    <input type="text" id="expressionInput" placeholder="Enter expression (e.g. 5'6 × 4 × 2 + Kitchen - 3×2)" />
     <input type="text" id="groupName" placeholder="Group name (optional before grouping)" />
 
     <div class="unit-selector">
@@ -157,14 +157,21 @@
     }
 
     function replaceDimensions(expr) {
+      // Handle 5'6 format
+      expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
+
       // Handle 5' as feet
       expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
-      // Handle '5 as inches
+
+      // Handle '6 as inches
       expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
-      // Handle ×, x, X as multiply
+
+      // Replace × x X with *
       expr = expr.replace(/[×xX]/g, '*');
-      // Handle ÷ and / as divide
+
+      // Replace ÷ and / with /
       expr = expr.replace(/[÷/]/g, '/');
+
       return expr;
     }
 
