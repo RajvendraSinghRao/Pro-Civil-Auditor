@@ -59,6 +59,38 @@
       background-color: #c9fbc9;
       font-weight: bold;
     }
+    .unit-selector {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .unit-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      background-color: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      text-align: left;
+    }
+    .unit-options {
+      position: absolute;
+      width: 100%;
+      background-color: #fff;
+      max-height: 120px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      z-index: 1;
+      display: none;
+    }
+    .unit-options div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .unit-options div:hover {
+      background-color: #eee;
+    }
     @media (max-width: 500px) {
       button {
         flex: 1 1 100%;
@@ -72,6 +104,17 @@
 
     <input type="text" id="expressionInput" placeholder="Enter expression (e.g. 5'×4'×2 + Flat A - 3'×2')" />
     <input type="text" id="groupName" placeholder="Group name (optional before grouping)" />
+
+    <div class="unit-selector">
+      <button class="unit-btn" onclick="toggleUnitDropdown()">Unit: <span id="selectedUnit">sq.ft</span> ▼</button>
+      <div class="unit-options" id="unitDropdown">
+        <div onclick="selectUnit('sq.ft')">sq.ft</div>
+        <div onclick="selectUnit('sq.in')">sq.in</div>
+        <div onclick="selectUnit('sq.m')">sq.m</div>
+        <div onclick="selectUnit('sq.cm')">sq.cm</div>
+        <div onclick="selectUnit('sq.mm')">sq.mm</div>
+      </div>
+    </div>
 
     <div class="buttons">
       <button onclick="evaluateExpression()">Calculate</button>
@@ -90,6 +133,28 @@
     let currentTotalInches = 0;
     let entryCount = 0;
     const allGroups = [];
+    let selectedUnit = 'sq.ft';
+
+    function toggleUnitDropdown() {
+      const dropdown = document.getElementById("unitDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    }
+
+    function selectUnit(unit) {
+      selectedUnit = unit;
+      document.getElementById("selectedUnit").innerText = unit;
+      document.getElementById("unitDropdown").style.display = "none";
+    }
+
+    function convertFromInches(sqInches) {
+      switch (selectedUnit) {
+        case 'sq.ft': return (sqInches / 144).toFixed(2) + ' sq.ft';
+        case 'sq.in': return sqInches.toFixed(2) + ' sq.in';
+        case 'sq.m': return (sqInches * 0.00064516).toFixed(4) + ' sq.m';
+        case 'sq.cm': return (sqInches * 6.4516).toFixed(2) + ' sq.cm';
+        case 'sq.mm': return (sqInches * 645.16).toFixed(1) + ' sq.mm';
+      }
+    }
 
     function parseFeetInchToInches(str) {
       const parts = str.trim().split("'");
@@ -102,7 +167,7 @@
       return expr.replace(/(\d+'\d*"?)|(\d+')/g, match => {
         const inches = parseFeetInchToInches(match);
         return `(${inches})`;
-      }).replace(/[×xX]/g, '*'); // support × as multiplication
+      }).replace(/[×xX]/g, '*');
     }
 
     function replaceGroupNames(expr) {
@@ -129,9 +194,9 @@
         return;
       }
 
-      const resultSqFt = resultInSqIn / 144;
       entryCount++;
-      const entryText = `#${entryCount}) ${input} = ${resultSqFt.toFixed(2)} sq.ft (${resultInSqIn.toFixed(2)} sq.in)`;
+      const resultText = convertFromInches(resultInSqIn);
+      const entryText = `#${entryCount}) ${input} = ${resultText}`;
       currentEntries.push(entryText);
       currentTotalInches += resultInSqIn;
 
@@ -165,14 +230,12 @@
       }
 
       const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
-      const totalFeet = currentTotalInches / 144;
-
       const groupDiv = document.createElement("div");
       groupDiv.className = "group-total";
 
       groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
         currentEntries.join("<br>") +
-        `<br>🧮 <strong>Total = ${totalFeet.toFixed(2)} sq. ft (${currentTotalInches.toFixed(2)} sq. in)</strong>`;
+        `<br>🧮 <strong>Total = ${convertFromInches(currentTotalInches)}</strong>`;
 
       document.getElementById("groups").appendChild(groupDiv);
 
@@ -206,14 +269,21 @@
           if (y > 270) { doc.addPage(); y = 20; }
         });
         doc.setFontSize(13);
-        const totalFt = (group.totalInches / 144).toFixed(2);
-        doc.text(`= Total: ${totalFt} sq. ft (${group.totalInches.toFixed(2)} sq. in)`, 25, y);
+        doc.text(`= Total: ${convertFromInches(group.totalInches)}`, 25, y);
         y += 12;
         if (y > 270) { doc.addPage(); y = 20; }
       });
 
       doc.save("Pro Civil Auditor.pdf");
     }
+
+    // Close unit dropdown if clicked outside
+    window.onclick = function(event) {
+      const dropdown = document.getElementById("unitDropdown");
+      if (!event.target.matches('.unit-btn')) {
+        dropdown.style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
