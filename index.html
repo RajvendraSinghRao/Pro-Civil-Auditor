@@ -68,28 +68,28 @@
 </head>
 <body>
   <div class="container">
-    <h2>Multi-Area Calculator with Labels</h2>
+    <h2>Multi-Area Calculator with Expressions</h2>
 
     <input type="text" id="areaName" placeholder="Enter area name (e.g. Kitchen)" />
     <input type="text" id="dimensionInput" placeholder="Enter size like 5'6 × 4'4" />
-
     <div class="buttons">
-      <button onclick="addArea()">Calculate</button>
-      <button onclick="resetEntries()">Reset Entry</button>
-      <button onclick="groupTotal()">Group Total</button>
-      <button onclick="exportToPDF()">Export to PDF</button>
+      <button onclick="addArea()">Add Area</button>
+      <button onclick="resetEntries()">Reset</button>
     </div>
 
-    <input type="text" id="groupName" placeholder="Enter group total name (e.g. Flat A)" />
+    <input type="text" id="groupExpr" placeholder="Type total expression like hall + kitchen - toilet" />
+    <input type="text" id="groupName" placeholder="Save as group name (optional)" />
+    <div class="buttons">
+      <button onclick="evaluateGroup()">Evaluate Group</button>
+      <button onclick="exportToPDF()">Export to PDF</button>
+    </div>
 
     <div id="entries"></div>
     <div id="groups"></div>
   </div>
 
   <script>
-    let currentEntries = [];
-    let currentTotalInches = 0;
-    let entryCount = 0;
+    const namedAreas = {};  // store areaName: areaValue
     const allGroups = [];
 
     function parseFeetInch(value) {
@@ -98,12 +98,12 @@
     }
 
     function addArea() {
-      const name = document.getElementById("areaName").value.trim() || `Area ${entryCount + 1}`;
+      const name = document.getElementById("areaName").value.trim().toLowerCase();
       const dimension = document.getElementById("dimensionInput").value.trim();
-
       const parts = dimension.toLowerCase().split("×");
+
       if (parts.length !== 2) {
-        alert("❌ Invalid format. Use: 5'6 × 4'4");
+        alert("❌ Use correct format like 5'6 × 4'4");
         return;
       }
 
@@ -112,54 +112,60 @@
       const areaSqInches = length * width;
       const areaSqFeet = areaSqInches / 144;
 
-      entryCount++;
-      currentTotalInches += areaSqInches;
+      const entryText = `🟢 ${name || "Unnamed"} (${parts[0].trim()} × ${parts[1].trim()}) = ${areaSqFeet.toFixed(2)} sq. ft`;
 
-      const entryText = `#${entryCount}) ${name} (${parts[0].trim()} × ${parts[1].trim()}) = ${areaSqFeet.toFixed(2)} sq. ft (${areaSqInches.toFixed(2)} sq. in)`;
-      currentEntries.push(entryText);
+      // Save to map if name is valid
+      if (name) namedAreas[name] = areaSqFeet;
 
       const entryDiv = document.createElement("div");
       entryDiv.className = "entry";
       entryDiv.innerText = entryText;
       document.getElementById("entries").appendChild(entryDiv);
 
+      // Clear inputs
       document.getElementById("areaName").value = "";
       document.getElementById("dimensionInput").value = "";
     }
 
     function resetEntries() {
-      currentEntries = [];
-      currentTotalInches = 0;
-      entryCount = 0;
       document.getElementById("entries").innerHTML = "";
+      document.getElementById("groups").innerHTML = "";
+      Object.keys(namedAreas).forEach(k => delete namedAreas[k]);
+      allGroups.length = 0;
     }
 
-    function groupTotal() {
-      if (currentEntries.length === 0) {
-        alert("Please add areas before grouping.");
-        return;
+    function evaluateGroup() {
+      const expr = document.getElementById("groupExpr").value.toLowerCase().trim();
+      if (!expr) return alert("Enter a valid expression using area names.");
+
+      const exprSafe = expr.replace(/[a-z_]+/gi, match => {
+        if (namedAreas[match] !== undefined) {
+          return `(${namedAreas[match]})`;
+        } else {
+          alert(`Unknown area name: "${match}"`);
+          throw new Error("Invalid area name");
+        }
+      });
+
+      let total = 0;
+      try {
+        total = eval(exprSafe);
+      } catch (e) {
+        return alert("Invalid expression.");
       }
 
       const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
-      const totalFeet = currentTotalInches / 144;
+      const groupText = `📦 ${groupName} = ${total.toFixed(2)} sq. ft from (${expr})`;
 
       const groupDiv = document.createElement("div");
       groupDiv.className = "group-total";
-
-      groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
-        currentEntries.join("<br>") +
-        `<br>🧮 <strong>Total = ${totalFeet.toFixed(2)} sq. ft (${currentTotalInches.toFixed(2)} sq. in)</strong>`;
-
+      groupDiv.innerText = groupText;
       document.getElementById("groups").appendChild(groupDiv);
 
-      allGroups.push({
-        name: groupName,
-        entries: [...currentEntries],
-        totalInches: currentTotalInches
-      });
+      allGroups.push({ name: groupName, expr, value: total });
 
-      // Reset current session
-      resetEntries();
+      // Clear input
+      document.getElementById("groupExpr").value = "";
       document.getElementById("groupName").value = "";
     }
 
@@ -169,27 +175,20 @@
       let y = 20;
 
       doc.setFontSize(16);
-      doc.text("Multi-Area Calculation Summary", 20, y);
+      doc.text("Area Group Summary", 20, y);
       y += 10;
 
-      allGroups.forEach((group, index) => {
-        doc.setFontSize(14);
-        doc.text(`Group ${index + 1}: ${group.name}`, 20, y);
-        y += 10;
-        group.entries.forEach(entry => {
-          doc.setFontSize(12);
-          doc.text(`- ${entry}`, 25, y);
-          y += 8;
-          if (y > 270) { doc.addPage(); y = 20; }
-        });
+      allGroups.forEach((group, i) => {
         doc.setFontSize(13);
-        const totalFt = (group.totalInches / 144).toFixed(2);
-        doc.text(`= Total: ${totalFt} sq. ft (${group.totalInches.toFixed(2)} sq. in)`, 25, y);
-        y += 12;
+        doc.text(`${i + 1}. ${group.name} = ${group.value.toFixed(2)} sq. ft`, 20, y);
+        y += 8;
+        doc.setFontSize(11);
+        doc.text(`Expr: ${group.expr}`, 25, y);
+        y += 10;
         if (y > 270) { doc.addPage(); y = 20; }
       });
 
-      doc.save("Multi-Area-Summary.pdf");
+      doc.save("Group-Summary.pdf");
     }
   </script>
 </body>
