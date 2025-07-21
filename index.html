@@ -78,6 +78,7 @@
       <button onclick="resetEntries()">Reset Entry</button>
       <button onclick="groupTotal()">Group Total</button>
       <button onclick="exportToPDF()">Export to PDF</button>
+      <button onclick="resetAll()">Reset All</button>
     </div>
 
     <div id="entries"></div>
@@ -147,6 +148,14 @@
       currentTotalInches = 0;
       entryCount = 0;
       document.getElementById("entries").innerHTML = "";
+    }
+
+    function resetAll() {
+      resetEntries();
+      allGroups.length = 0;
+      document.getElementById("groups").innerHTML = "";
+      document.getElementById("groupName").value = "";
+      document.getElementById("expressionInput").value = "";
     }
 
     function groupTotal() {
