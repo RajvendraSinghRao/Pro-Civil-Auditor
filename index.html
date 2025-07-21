@@ -5,6 +5,7 @@
   <title>Advanced Area Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -91,6 +92,26 @@
     .unit-options div:hover {
       background-color: #eee;
     }
+    .export-dropdown {
+      position: relative;
+      flex: 1 1 100%;
+    }
+    .export-dropdown-menu {
+      display: none;
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      width: 100%;
+      z-index: 2;
+      border-radius: 5px;
+    }
+    .export-dropdown-menu div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .export-dropdown-menu div:hover {
+      background-color: #eee;
+    }
     @media (max-width: 500px) {
       button {
         flex: 1 1 100%;
@@ -120,7 +141,15 @@
       <button onclick="evaluateExpression()">Calculate</button>
       <button onclick="resetEntries()">Reset Entry</button>
       <button onclick="groupTotal()">Group Total</button>
-      <button onclick="exportToPDF()">Export to PDF</button>
+      
+      <div class="export-dropdown">
+        <button onclick="toggleExportDropdown()" id="exportBtn">Export ▼</button>
+        <div id="exportDropdown" class="export-dropdown-menu">
+          <div onclick="exportToPDF()">📄 Export as PDF</div>
+          <div onclick="exportToExcel()">📊 Export as Excel (.xlsx)</div>
+        </div>
+      </div>
+
       <button onclick="resetAll()">Reset All</button>
     </div>
 
@@ -157,21 +186,11 @@
     }
 
     function replaceDimensions(expr) {
-      // Handle 5'6 format
       expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
-
-      // Handle 5' as feet
       expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
-
-      // Handle '6 as inches
       expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
-
-      // Replace × x X with *
       expr = expr.replace(/[×xX]/g, '*');
-
-      // Replace ÷ and / with /
       expr = expr.replace(/[÷/]/g, '/');
-
       return expr;
     }
 
@@ -187,10 +206,8 @@
     function evaluateExpression() {
       const input = document.getElementById("expressionInput").value.trim();
       if (!input) return;
-
       let parsed = replaceDimensions(input);
       parsed = replaceGroupNames(parsed);
-
       let resultInSqIn = 0;
       try {
         resultInSqIn = eval(parsed);
@@ -198,18 +215,15 @@
         alert("❌ Invalid expression.");
         return;
       }
-
       entryCount++;
       const resultText = convertFromInches(resultInSqIn);
       const entryText = `#${entryCount}) ${input} = ${resultText}`;
       currentEntries.push(entryText);
       currentTotalInches += resultInSqIn;
-
       const entryDiv = document.createElement("div");
       entryDiv.className = "entry";
       entryDiv.innerText = entryText;
       document.getElementById("entries").appendChild(entryDiv);
-
       document.getElementById("expressionInput").value = "";
     }
 
@@ -233,36 +247,34 @@
         alert("Add some calculations first.");
         return;
       }
-
       const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
       const groupDiv = document.createElement("div");
       groupDiv.className = "group-total";
-
       groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
         currentEntries.join("<br>") +
         `<br>🧮 <strong>Total = ${convertFromInches(currentTotalInches)}</strong>`;
-
       document.getElementById("groups").appendChild(groupDiv);
-
       allGroups.push({
         name: groupName,
         entries: [...currentEntries],
         totalInches: currentTotalInches
       });
-
       resetEntries();
       document.getElementById("groupName").value = "";
+    }
+
+    function toggleExportDropdown() {
+      const dropdown = document.getElementById("exportDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
     }
 
     function exportToPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       let y = 20;
-
       doc.setFontSize(16);
       doc.text("Pro Civil Auditor", 20, y);
       y += 10;
-
       allGroups.forEach((group, index) => {
         doc.setFontSize(14);
         doc.text(`${group.name}`, 20, y);
@@ -278,15 +290,26 @@
         y += 12;
         if (y > 270) { doc.addPage(); y = 20; }
       });
-
       doc.save("Pro Civil Auditor.pdf");
     }
 
-    // Close dropdown if clicked outside
+    function exportToExcel() {
+      const wb = XLSX.utils.book_new();
+      allGroups.forEach(group => {
+        const data = group.entries.map(entry => [entry]);
+        data.push([`Total = ${convertFromInches(group.totalInches)}`]);
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, group.name.substring(0, 31));
+      });
+      XLSX.writeFile(wb, "Pro Civil Auditor.xlsx");
+    }
+
     window.onclick = function(event) {
-      const dropdown = document.getElementById("unitDropdown");
+      if (!event.target.closest('#exportBtn')) {
+        document.getElementById("exportDropdown").style.display = "none";
+      }
       if (!event.target.matches('.unit-btn')) {
-        dropdown.style.display = "none";
+        document.getElementById("unitDropdown").style.display = "none";
       }
     };
   </script>
