@@ -68,7 +68,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Multi-Area Smart Calculator</h2>
+    <h2>Pro Civil Auditor</h2>
 
     <input type="text" id="expressionInput" placeholder="Enter expression (e.g. 5'×4'×2 + Flat A - 3'×2')" />
     <input type="text" id="groupName" placeholder="Group name (optional before grouping)" />
@@ -192,7 +192,7 @@
       let y = 20;
 
       doc.setFontSize(16);
-      doc.text("Multi-Area Calculation Summary", 20, y);
+      doc.text("Pro Civil Auditor", 20, y);
       y += 10;
 
       allGroups.forEach((group, index) => {
@@ -212,7 +212,7 @@
         if (y > 270) { doc.addPage(); y = 20; }
       });
 
-      doc.save("Multi-Area-Summary.pdf");
+      doc.save("Pro Civil Auditor.pdf");
     }
   </script>
 </body>
