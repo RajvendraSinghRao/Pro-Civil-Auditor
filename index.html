@@ -78,7 +78,7 @@
       position: absolute;
       width: 100%;
       background-color: #fff;
-      max-height: 120px;
+      max-height: 140px;
       overflow-y: auto;
       border: 1px solid #ccc;
       border-radius: 5px;
@@ -134,6 +134,7 @@
         <div onclick="selectUnit('sq.m')">sq.m</div>
         <div onclick="selectUnit('sq.cm')">sq.cm</div>
         <div onclick="selectUnit('sq.mm')">sq.mm</div>
+        <div style="background-color: white; color: black;" onclick="selectUnit('normal')">Normal Math</div>
       </div>
     </div>
 
@@ -180,6 +181,7 @@
         case 'sq.m': return (sqInches * 0.00064516).toFixed(4) + ' sq.m';
         case 'sq.cm': return (sqInches * 6.4516).toFixed(2) + ' sq.cm';
         case 'sq.mm': return (sqInches * 645.16).toFixed(1) + ' sq.mm';
+        case 'normal': return sqInches.toFixed(2);
       }
     }
 
@@ -204,20 +206,46 @@
     function evaluateExpression() {
       const input = document.getElementById("expressionInput").value.trim();
       if (!input) return;
-      let parsed = replaceDimensions(input);
-      parsed = replaceGroupNames(parsed);
-      let resultInSqIn = 0;
-      try {
-        resultInSqIn = eval(parsed);
-      } catch (e) {
-        alert("❌ Invalid expression.");
-        return;
+
+      let parsed = input;
+      let result = 0;
+
+      if (selectedUnit === 'normal') {
+        parsed = replaceGroupNames(parsed);
+        try {
+          result = eval(parsed);
+        } catch (e) {
+          alert("❌ Invalid expression.");
+          return;
+        }
+      } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+        parsed = replaceGroupNames(parsed).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+        try {
+          result = eval(parsed);
+        } catch (e) {
+          alert("❌ Invalid expression.");
+          return;
+        }
+        if (selectedUnit === 'sq.m') result *= 1550.0031;
+        if (selectedUnit === 'sq.cm') result *= 0.15500031;
+        if (selectedUnit === 'sq.mm') result *= 0.00155;
+      } else {
+        parsed = replaceDimensions(input);
+        parsed = replaceGroupNames(parsed);
+        try {
+          result = eval(parsed);
+        } catch (e) {
+          alert("❌ Invalid expression.");
+          return;
+        }
       }
+
       entryCount++;
-      const resultText = convertFromInches(resultInSqIn);
+      const resultText = convertFromInches(result);
       const entryText = `#${entryCount}) ${input} = ${resultText}`;
       currentEntries.push(entryText);
-      currentTotalInches += resultInSqIn;
+      if (selectedUnit !== 'normal') currentTotalInches += result;
+
       const entryDiv = document.createElement("div");
       entryDiv.className = "entry";
       entryDiv.innerText = entryText;
