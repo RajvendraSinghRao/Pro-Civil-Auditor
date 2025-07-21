@@ -188,7 +188,7 @@
 
       allGroups.forEach((group, index) => {
         doc.setFontSize(14);
-        doc.text(`Group ${index + 1}: ${group.name}`, 20, y);
+        doc.text(`${group.name}`, 20, y);
         y += 10;
         group.entries.forEach(entry => {
           doc.setFontSize(12);
