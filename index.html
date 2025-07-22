@@ -274,7 +274,7 @@
       groupDiv.className = "group-total";
 
       if (currentEntries.length === 0) {
-        groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>🧮 <strong>Total = ${convertFromInches(0)}</strong>`;
+        groupDiv.innerHTML = `📦 <strong>${groupName}</strong>`;
         allGroups.push({
           name: groupName,
           entries: [],
@@ -318,9 +318,13 @@
           y += 8;
           if (y > 270) { doc.addPage(); y = 20; }
         });
-        doc.setFontSize(13);
-        doc.text(`= Total: ${convertFromInches(group.totalInches)}`, 25, y);
-        y += 12;
+        if (group.entries.length > 0) {
+          doc.setFontSize(13);
+          doc.text(`= Total: ${convertFromInches(group.totalInches)}`, 25, y);
+          y += 12;
+        } else {
+          y += 5;
+        }
         if (y > 270) { doc.addPage(); y = 20; }
       });
       doc.save("Pro Civil Auditor.pdf");
@@ -338,7 +342,9 @@
       allGroups.forEach(group => {
         data.push([`${group.name}`]);
         group.entries.forEach(entry => data.push([entry]));
-        data.push([`Total = ${convertFromInches(group.totalInches)}`]);
+        if (group.entries.length > 0) {
+          data.push([`Total = ${convertFromInches(group.totalInches)}`]);
+        }
         data.push(['']);
       });
 
