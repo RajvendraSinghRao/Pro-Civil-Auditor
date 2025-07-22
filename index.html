@@ -269,22 +269,29 @@
     }
 
     function groupTotal() {
-      if (currentEntries.length === 0) {
-        alert("Add some calculations first.");
-        return;
-      }
       const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
       const groupDiv = document.createElement("div");
       groupDiv.className = "group-total";
-      groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
-        currentEntries.join("<br>") +
-        `<br>🧮 <strong>Total = ${convertFromInches(currentTotalInches)}</strong>`;
+
+      if (currentEntries.length === 0) {
+        groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>🧮 <strong>Total = ${convertFromInches(0)}</strong>`;
+        allGroups.push({
+          name: groupName,
+          entries: [],
+          totalInches: 0
+        });
+      } else {
+        groupDiv.innerHTML = `📦 <strong>${groupName}</strong><br>` +
+          currentEntries.join("<br>") +
+          `<br>🧮 <strong>Total = ${convertFromInches(currentTotalInches)}</strong>`;
+        allGroups.push({
+          name: groupName,
+          entries: [...currentEntries],
+          totalInches: currentTotalInches
+        });
+      }
+
       document.getElementById("groups").appendChild(groupDiv);
-      allGroups.push({
-        name: groupName,
-        entries: [...currentEntries],
-        totalInches: currentTotalInches
-      });
       resetEntries();
       document.getElementById("groupName").value = "";
     }
