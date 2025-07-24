@@ -347,7 +347,7 @@
     groupsDiv.innerHTML = "";
     allGroups.forEach((group, index) => {
       const groupDiv = document.createElement("div");
-      groupDiv.className = "group-total";
+      groupDiv.className = "group group-total";
       let html = `📦 <strong contenteditable="true" onblur="renameGroup(${index}, this.innerText.trim())">${group.name}</strong><br>`;
       group.entries.forEach((entry, entryIndex) => {
         html += `<div contenteditable="true" onblur="updateEntry(${index}, ${entryIndex}, this.innerText)">${entry}</div>`;
