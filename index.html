@@ -458,23 +458,23 @@
   };
 
 function exportToPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let y = 10;
-    doc.setFontSize(14);
-    doc.text("Pro Civil Auditor - Export", 10, y);
-    y += 10;
-    doc.setFontSize(11);
+  const doc = new window.jspdf.jsPDF();
+  let y = 10;
+  doc.setFontSize(14);
+  doc.text("Pro Civil Auditor - Export", 10, y);
+  y += 10;
+  doc.setFontSize(11);
 
-    if (allGroups.length === 0) {
-      doc.text("No groups available to export.", 10, y);
-    } else {
-      allGroups.forEach((group, idx) => {
-        doc.setFont(undefined, "bold");
-        doc.text(`${idx + 1}) ${group.name}`, 10, y);
-        y += 7;
+  if (allGroups.length === 0) {
+    doc.text("No groups available to export.", 10, y);
+  } else {
+    allGroups.forEach(group => {
+      doc.setFont(undefined, "bold");
+      doc.text(`${group.name}`, 10, y);  // ✅ No number before group name
+      y += 7;
 
-        doc.setFont(undefined, "normal");
+      doc.setFont(undefined, "normal");
+      if (group.entries.length > 0) {
         group.entries.forEach(entry => {
           if (y > 280) {
             doc.addPage();
@@ -484,13 +484,18 @@ function exportToPDF() {
           y += 6;
         });
 
+        // ✅ Only show total if group has entries
         doc.text(`Total: ${convertFromInches(group.totalInches)}`, 12, y);
         y += 10;
-      });
-    }
-
-    doc.save("Pro-Civil-Auditor.pdf");
+      } else {
+        y += 5; // small gap if group is empty
+      }
+    });
   }
+
+  doc.save("Pro-Civil-Auditor.pdf");
+}
+
 
   function exportToExcel() {
     if (allGroups.length === 0) {
