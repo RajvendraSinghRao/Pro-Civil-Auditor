@@ -560,28 +560,32 @@ function exportToPDF() {
 
   const data = [];
 
-  allGroups.forEach(group => {
-    if (group.entries.length === 0) return; // Skip empty groups
-
-    data.push([group.name]); // Group Name Row
-
-    group.entries.forEach(entry => {
-      data.push([entry]); // Each entry
-    });
-
-    data.push([`Total: ${convertFromInches(group.totalInches)}`]); // Group Total
-    data.push([]); // Blank line between groups
-  });
-
-  if (data.length === 0) {
+  if (allGroups.length === 0) {
     data.push(["No groups to export"]);
+  } else {
+    allGroups.forEach(group => {
+      data.push([group.name]); // ✅ Group name always
+
+      if (group.entries.length > 0) {
+        group.entries.forEach(entry => {
+          data.push([entry]); // ✅ All entries
+        });
+
+        // ✅ Total with unit
+        const unit = document.getElementById("unitSelect").value || "unit";
+        data.push([`Total: ${convertFromInches(group.totalInches)} ${unit}`]);
+      }
+
+      data.push([]); // ✅ Blank line between groups
+    });
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(data); // Create worksheet
+  const ws = XLSX.utils.aoa_to_sheet(data); // Convert to worksheet
   XLSX.utils.book_append_sheet(wb, ws, "Audit Data");
 
   XLSX.writeFile(wb, "Pro-Civil-Auditor.xlsx"); // Download file
 }
+
 
 
   function toggleExportDropdown() {
