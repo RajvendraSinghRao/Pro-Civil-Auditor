@@ -112,7 +112,7 @@
     .export-dropdown-menu div:hover {
       background-color: #eee;
     }
-    #deleteModal {
+    #deleteModal, #groupSettingsModal {
       display: none;
       position: fixed;
       top: 0;
@@ -124,7 +124,7 @@
       justify-content: center;
       align-items: center;
     }
-    #deleteModalContent {
+    #deleteModalContent, #groupSettingsContent {
       background: white;
       padding: 20px;
       border-radius: 10px;
@@ -170,6 +170,7 @@
         </div>
       </div>
       <button onclick="openDeleteModal()">🗑️ Delete Group(s)</button>
+      <button onclick="openGroupSettings()">⚙️ Group Settings</button>
     </div>
 
     <div id="entries"></div>
@@ -184,6 +185,18 @@
       <div style="margin-top:10px; text-align:right;">
         <button onclick="deleteSelectedGroups()">Delete Selected</button>
         <button onclick="closeDeleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Settings Modal -->
+  <div id="groupSettingsModal">
+    <div id="groupSettingsContent">
+      <h3>Reorder Groups</h3>
+      <ul id="sortableGroupList" style="list-style:none; padding:0;"></ul>
+      <div style="margin-top:10px; text-align:right;">
+        <button onclick="saveGroupOrder()">Save</button>
+        <button onclick="closeGroupSettings()">Cancel</button>
       </div>
     </div>
   </div>
@@ -221,8 +234,7 @@
       expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
       expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
       expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
-      expr = expr.replace(/[×xX]/g, '*');
-      expr = expr.replace(/[÷/]/g, '/');
+      expr = expr.replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
       return expr;
     }
 
@@ -237,9 +249,7 @@
     function evaluateExpression() {
       const input = document.getElementById("expressionInput").value.trim();
       if (!input) return;
-
-      let parsed = input;
-      let result = 0;
+      let parsed = input, result = 0;
 
       if (selectedUnit === 'normal') {
         parsed = replaceGroupNames(parsed);
@@ -278,11 +288,7 @@
 
     function groupTotal() {
       const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
-      const group = {
-        name: groupName,
-        entries: [...currentEntries],
-        totalInches: currentTotalInches
-      };
+      const group = { name: groupName, entries: [...currentEntries], totalInches: currentTotalInches };
       allGroups.push(group);
       saveGroupsToStorage();
       renderGroups();
@@ -297,7 +303,9 @@
         const groupDiv = document.createElement("div");
         groupDiv.className = "group-total";
         let html = `📦 <strong contenteditable="true" onblur="renameGroup(${index}, this.innerText.trim())">${group.name}</strong><br>`;
-        group.entries.forEach(entry => html += `${entry}<br>`);
+        group.entries.forEach((entry, entryIndex) => {
+          html += `<div contenteditable="true" onblur="updateEntry(${index}, ${entryIndex}, this.innerText)">${entry}</div>`;
+        });
         if (group.entries.length > 0)
           html += `🧮 <strong>Total = ${convertFromInches(group.totalInches)}</strong>`;
         groupDiv.innerHTML = html;
@@ -312,33 +320,29 @@
       }
     }
 
+    function updateEntry(groupIndex, entryIndex, newText) {
+      allGroups[groupIndex].entries[entryIndex] = newText;
+      const values = allGroups[groupIndex].entries.map(text => {
+        const match = text.match(/=\s*(\d+(\.\d+)?)/);
+        return match ? parseFloat(match[1]) : 0;
+      });
+      allGroups[groupIndex].totalInches = values.reduce((sum, val) => sum + val, 0);
+      saveGroupsToStorage();
+      renderGroups();
+    }
+
     function toggleExportDropdown() {
-      const dropdown = document.getElementById("exportDropdown");
-      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+      document.getElementById("exportDropdown").style.display = document.getElementById("exportDropdown").style.display === "block" ? "none" : "block";
     }
 
     function exportToPDF() {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let y = 20;
-      doc.setFontSize(16);
-      doc.text("Pro Civil Auditor", 20, y);
-      y += 10;
+      const doc = new jsPDF(); let y = 20;
+      doc.setFontSize(16); doc.text("Pro Civil Auditor", 20, y); y += 10;
       allGroups.forEach(group => {
-        doc.setFontSize(14);
-        doc.text(`${group.name}`, 20, y); y += 10;
-        group.entries.forEach(entry => {
-          doc.setFontSize(12);
-          doc.text(`- ${entry}`, 25, y); y += 8;
-          if (y > 270) { doc.addPage(); y = 20; }
-        });
-        if (group.entries.length > 0) {
-          doc.setFontSize(13);
-          doc.text(`= Total: ${convertFromInches(group.totalInches)}`, 25, y);
-          y += 12;
-        } else {
-          y += 5;
-        }
+        doc.setFontSize(14); doc.text(`${group.name}`, 20, y); y += 10;
+        group.entries.forEach(entry => { doc.setFontSize(12); doc.text(`- ${entry}`, 25, y); y += 8; if (y > 270) { doc.addPage(); y = 20; } });
+        if (group.entries.length > 0) { doc.setFontSize(13); doc.text(`= Total: ${convertFromInches(group.totalInches)}`, 25, y); y += 12; } else { y += 5; }
         if (y > 270) { doc.addPage(); y = 20; }
       });
       doc.save("Pro Civil Auditor.pdf");
@@ -346,14 +350,11 @@
 
     function exportToExcel() {
       if (allGroups.length === 0) return alert("⚠️ No group data to export.");
-      const wb = XLSX.utils.book_new();
-      const data = [];
+      const wb = XLSX.utils.book_new(); const data = [];
       allGroups.forEach(group => {
         data.push([`${group.name}`]);
         group.entries.forEach(entry => data.push([entry]));
-        if (group.entries.length > 0) {
-          data.push([`Total = ${convertFromInches(group.totalInches)}`]);
-        }
+        if (group.entries.length > 0) data.push([`Total = ${convertFromInches(group.totalInches)}`]);
         data.push(['']);
       });
       const ws = XLSX.utils.aoa_to_sheet(data);
@@ -366,7 +367,7 @@
       listContainer.innerHTML = "";
       allGroups.forEach((group, index) => {
         const div = document.createElement("div");
-        div.innerHTML = `<label><input type="checkbox" value="${index}" /> ${group.name}</label>`;
+        div.innerHTML = `<label style="display:flex;align-items:center;gap:10px;"><input type="checkbox" value="${index}" /> ${group.name}</label>`;
         listContainer.appendChild(div);
       });
       document.getElementById("deleteModal").style.display = "flex";
@@ -379,12 +380,59 @@
     function deleteSelectedGroups() {
       const checkboxes = document.querySelectorAll("#deleteList input[type='checkbox']:checked");
       const indexesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => b - a);
-      indexesToDelete.forEach(index => {
-        allGroups.splice(index, 1);
-      });
+      indexesToDelete.forEach(index => allGroups.splice(index, 1));
       saveGroupsToStorage();
       renderGroups();
       closeDeleteModal();
+    }
+
+    function openGroupSettings() {
+      const list = document.getElementById("sortableGroupList");
+      list.innerHTML = "";
+      allGroups.forEach((group, index) => {
+        const li = document.createElement("li");
+        li.draggable = true;
+        li.dataset.index = index;
+        li.style.padding = "10px";
+        li.style.border = "1px solid #ccc";
+        li.style.marginBottom = "5px";
+        li.style.background = "#f9f9f9";
+        li.style.cursor = "move";
+        li.innerText = group.name;
+
+        li.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", index);
+          li.style.opacity = "0.5";
+        });
+
+        li.addEventListener("dragover", e => e.preventDefault());
+
+        li.addEventListener("drop", e => {
+          e.preventDefault();
+          const from = parseInt(e.dataTransfer.getData("text/plain"));
+          const to = parseInt(li.dataset.index);
+          const moved = allGroups.splice(from, 1)[0];
+          allGroups.splice(to, 0, moved);
+          openGroupSettings();
+        });
+
+        li.addEventListener("dragend", () => {
+          li.style.opacity = "1";
+        });
+
+        list.appendChild(li);
+      });
+      document.getElementById("groupSettingsModal").style.display = "flex";
+    }
+
+    function saveGroupOrder() {
+      saveGroupsToStorage();
+      renderGroups();
+      closeGroupSettings();
+    }
+
+    function closeGroupSettings() {
+      document.getElementById("groupSettingsModal").style.display = "none";
     }
 
     function saveGroupsToStorage() {
@@ -400,13 +448,9 @@
       }
     };
 
-    window.onclick = function(event) {
-      if (!event.target.closest('#exportBtn')) {
-        document.getElementById("exportDropdown").style.display = "none";
-      }
-      if (!event.target.matches('.unit-btn')) {
-        document.getElementById("unitDropdown").style.display = "none";
-      }
+    window.onclick = function (event) {
+      if (!event.target.closest('#exportBtn')) document.getElementById("exportDropdown").style.display = "none";
+      if (!event.target.matches('.unit-btn')) document.getElementById("unitDropdown").style.display = "none";
     };
   </script>
 </body>
