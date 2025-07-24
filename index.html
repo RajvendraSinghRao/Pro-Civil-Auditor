@@ -355,14 +355,14 @@
     }
   }
 
- function updateEntry(groupIndex, entryIndex, newText) {
+function updateEntry(groupIndex, entryIndex, newText) {
   const entryPrefixMatch = newText.match(/^#\d+\)\s*(.*)=/);
   if (!entryPrefixMatch) {
     alert("Invalid format. Use the format: #n) expression = result");
     return;
   }
 
-  const expr = entryPrefixMatch[1].trim(); // get the expression part
+  const expr = entryPrefixMatch[1].trim();
   let result = 0;
 
   try {
@@ -385,13 +385,37 @@
     const updatedEntry = `#${entryIndex + 1}) ${expr} = ${convertFromInches(result)}`;
     allGroups[groupIndex].entries[entryIndex] = updatedEntry;
 
-    // update group total
-    const values = allGroups[groupIndex].entries.map(entry => {
-      const match = entry.match(/=\s*([\d.]+)/);
-      return match ? parseFloat(match[1]) : 0;
+    // ✅ Recalculate total from parsed expressions
+    let total = 0;
+    allGroups[groupIndex].entries.forEach(entry => {
+      const expressionMatch = entry.match(/^#\d+\)\s*(.*)=/);
+      if (expressionMatch) {
+        const exp = expressionMatch[1].trim();
+        try {
+          let parsedExp = exp;
+          let value = 0;
+          if (selectedUnit === 'normal') {
+            parsedExp = replaceGroupNames(parsedExp);
+            value = eval(parsedExp);
+          } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+            parsedExp = replaceGroupNames(parsedExp).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+            value = eval(parsedExp);
+            if (selectedUnit === 'sq.m') value *= 1550.0031;
+            if (selectedUnit === 'sq.cm') value *= 0.15500031;
+            if (selectedUnit === 'sq.mm') value *= 0.00155;
+          } else {
+            parsedExp = replaceDimensions(parsedExp);
+            parsedExp = replaceGroupNames(parsedExp);
+            value = eval(parsedExp);
+          }
+          total += value;
+        } catch (e) {
+          console.warn("Skipping invalid entry in total calc:", entry);
+        }
+      }
     });
 
-    allGroups[groupIndex].totalInches = values.reduce((sum, val) => sum + val, 0);
+    allGroups[groupIndex].totalInches = total;
     saveGroupsToStorage();
     renderGroups();
   } catch (e) {
