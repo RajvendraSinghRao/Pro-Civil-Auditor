@@ -510,6 +510,11 @@ function exportToPDF() {
     XLSX.writeFile(wb, "Pro-Civil-Auditor.xlsx");
   }
 
+  function toggleExportDropdown() {
+  const menu = document.getElementById("exportDropdown");
+  menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+
   
 </script>
 </body>
