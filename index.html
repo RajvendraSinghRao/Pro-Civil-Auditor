@@ -630,48 +630,97 @@ let startX = 0;
 let endX = 0;
 let currentGroupElement = null;
 
-// Swipe detection (left swipe)
-document.querySelectorAll('.group').forEach(group => {
-  group.addEventListener('touchstart', function(e) {
-    startX = e.touches[0].clientX;
-    currentGroupElement = this;
-  });
+<script>
+let groupCount = 0;
+let currentGroupElement = null;
 
-  group.addEventListener('touchend', function(e) {
-    endX = e.changedTouches[0].clientX;
-    if (startX - endX > 50) { // swiped left
-      showPopup();
-    }
-  });
-});
-
-// Show popup
-function showPopup() {
-  document.getElementById('popupModal').style.display = 'flex';
-  history.pushState({ modalOpen: true }, ''); // enables back button handling
-}
-
-// Close popup
-function closePopup() {
-  document.getElementById('popupModal').style.display = 'none';
-  if (history.state && history.state.modalOpen) {
-    history.back();
+function addGroup() {
+  const groupName = prompt("Enter Group Name:");
+  if (groupName) {
+    const groups = JSON.parse(localStorage.getItem("groups") || "[]");
+    groups.push({ name: groupName, entries: [] });
+    localStorage.setItem("groups", JSON.stringify(groups));
+    renderGroups();
   }
 }
 
-// Duplicate group
+function renderGroups() {
+  const container = document.getElementById("groupContainer");
+  container.innerHTML = "";
+  const groups = JSON.parse(localStorage.getItem("groups") || "[]");
+
+  groups.forEach((group, groupIndex) => {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "group group-total"; // ✅ ADD .group here
+    groupDiv.setAttribute("data-group", groupIndex);
+
+    const title = document.createElement("div");
+    title.className = "group-title";
+    title.textContent = group.name;
+
+    groupDiv.appendChild(title);
+    container.appendChild(groupDiv);
+  });
+}
+
+function showPopup() {
+  document.getElementById("popup").style.display = "block";
+}
+
+function closePopup() {
+  document.getElementById("popup").style.display = "none";
+  currentGroupElement = null;
+}
+
 function duplicateGroup() {
   if (currentGroupElement) {
-    const clone = currentGroupElement.cloneNode(true);
-    currentGroupElement.parentNode.insertBefore(clone, currentGroupElement.nextSibling);
+    const groupIndex = parseInt(currentGroupElement.getAttribute("data-group"));
+    const groups = JSON.parse(localStorage.getItem("groups") || "[]");
+    const cloneGroup = JSON.parse(JSON.stringify(groups[groupIndex]));
+
+    cloneGroup.name += " Copy";
+    groups.splice(groupIndex + 1, 0, cloneGroup);
+    localStorage.setItem("groups", JSON.stringify(groups));
+    renderGroups();
+    closePopup();
   }
-  closePopup();
 }
 
-// Back button closes modal
-window.addEventListener('popstate', function(event) {
+// ✅ Swipe detection with accuracy (left only)
+let startX = 0;
+let endX = 0;
+
+document.addEventListener('touchstart', function (e) {
+  const target = e.target.closest('.group');
+  if (!target) return;
+  startX = e.touches[0].clientX;
+  currentGroupElement = target;
+});
+
+document.addEventListener('touchend', function (e) {
+  const target = e.target.closest('.group');
+  if (!target || currentGroupElement !== target) return;
+
+  endX = e.changedTouches[0].clientX;
+  const deltaX = startX - endX;
+  const deltaY = Math.abs(e.changedTouches[0].clientY - (e.touches?.[0]?.clientY || 0));
+
+  if (deltaX > 50 && Math.abs(deltaX) > deltaY) {
+    showPopup();
+  }
+});
+
+// ✅ Back button closes popup
+window.addEventListener("popstate", function () {
   closePopup();
 });
+
+window.onload = function () {
+  renderGroups();
+};
+</script>
+
+    
 </script>
 
   
