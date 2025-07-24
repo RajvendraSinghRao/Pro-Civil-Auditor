@@ -663,68 +663,6 @@ function renderGroups() {
   });
 }
 
-function showPopup() {
-  document.getElementById("popup").style.display = "block";
-}
-
-function closePopup() {
-  document.getElementById("popup").style.display = "none";
-  currentGroupElement = null;
-}
-
-function duplicateGroup() {
-  if (currentGroupElement) {
-    const groupIndex = parseInt(currentGroupElement.getAttribute("data-group"));
-    const groups = JSON.parse(localStorage.getItem("groups") || "[]");
-    const cloneGroup = JSON.parse(JSON.stringify(groups[groupIndex]));
-
-    cloneGroup.name += " Copy";
-    groups.splice(groupIndex + 1, 0, cloneGroup);
-    localStorage.setItem("groups", JSON.stringify(groups));
-    renderGroups();
-    closePopup();
-  }
-}
-
-// ✅ Swipe detection with accuracy (left only)
-let startX = 0;
-let endX = 0;
-
-document.addEventListener('touchstart', function (e) {
-  const target = e.target.closest('.group');
-  if (!target) return;
-  startX = e.touches[0].clientX;
-  currentGroupElement = target;
-});
-
-document.addEventListener('touchend', function (e) {
-  const target = e.target.closest('.group');
-  if (!target || currentGroupElement !== target) return;
-
-  endX = e.changedTouches[0].clientX;
-  const deltaX = startX - endX;
-  const deltaY = Math.abs(e.changedTouches[0].clientY - (e.touches?.[0]?.clientY || 0));
-
-  if (deltaX > 50 && Math.abs(deltaX) > deltaY) {
-    showPopup();
-  }
-});
-
-// ✅ Back button closes popup
-window.addEventListener("popstate", function () {
-  closePopup();
-});
-
-window.onload = function () {
-  renderGroups();
-};
-</script>
-
-  <div class="popup" id="popup" style="display:none; position:fixed; top:30%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.3); z-index:1000;">
-  <button onclick="duplicateGroup()">Duplicate Group</button>
-  <button onclick="closePopup()">Cancel</button>
-</div>
-
     
 </script>
 
