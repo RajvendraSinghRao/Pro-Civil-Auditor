@@ -175,6 +175,15 @@
         flex: 1 1 100%;
       }
     }
+.drag-handle {
+  cursor: grab;
+  padding-right: 10px;
+  font-size: 18px;
+  user-select: none;
+  color: #666;
+}
+
+    
   </style>
 </head>
 <body>
@@ -461,15 +470,20 @@ function updateEntry(groupIndex, entryIndex, newText) {
 
   function openGroupSettings() {
     const ul = document.getElementById("sortableGroupList");
-    ul.innerHTML = "";
-    allGroups.forEach((group, index) => {
-      const li = document.createElement("li");
-      li.textContent = group.name;
-      li.setAttribute("data-index", index);
-      ul.appendChild(li);
-    });
+   ul.innerHTML = "";
+allGroups.forEach((group, index) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="drag-handle">☰</span> <span>${group.name}</span>`;
+  li.setAttribute("data-index", index);
+  ul.appendChild(li);
+});
 
-    $("#sortableGroupList").sortable();
+
+
+    $("#sortableGroupList").sortable({
+  handle: ".drag-handle"
+});
+
     document.getElementById("groupSettingsModal").style.display = "flex";
 
     history.pushState({ modalOpen: true }, "");
