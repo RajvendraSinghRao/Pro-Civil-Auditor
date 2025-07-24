@@ -556,29 +556,31 @@ function exportToPDF() {
 
 
   function exportToExcel() {
-  let content = "Pro Civil Auditor - Export\n\n";
+  const wb = XLSX.utils.book_new(); // Create workbook
 
-  if (allGroups.length === 0) {
-    content += "No groups available to export.\n";
-  } else {
-    allGroups.forEach(group => {
-      content += `${group.name}\n`; // ✅ Group Name (no numbering)
-      if (group.entries.length > 0) {
-        group.entries.forEach(entry => {
-          content += entry + "\n"; // ✅ All Entries
-        });
-        content += `Total: ${convertFromInches(group.totalInches)}\n\n`; // ✅ Total
-      } else {
-        content += "\n"; // Skip total for empty groups
-      }
+  const data = [];
+
+  allGroups.forEach(group => {
+    if (group.entries.length === 0) return; // Skip empty groups
+
+    data.push([group.name]); // Group Name Row
+
+    group.entries.forEach(entry => {
+      data.push([entry]); // Each entry
     });
+
+    data.push([`Total: ${convertFromInches(group.totalInches)}`]); // Group Total
+    data.push([]); // Blank line between groups
+  });
+
+  if (data.length === 0) {
+    data.push(["No groups to export"]);
   }
 
-  const blob = new Blob([content], { type: "application/vnd.ms-excel" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "Pro-Civil-Auditor.xls";
-  a.click();
+  const ws = XLSX.utils.aoa_to_sheet(data); // Create worksheet
+  XLSX.utils.book_append_sheet(wb, ws, "Audit Data");
+
+  XLSX.writeFile(wb, "Pro-Civil-Auditor.xlsx"); // Download file
 }
 
 
@@ -589,5 +591,8 @@ function exportToPDF() {
 
   
 </script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </body>
 </html>
