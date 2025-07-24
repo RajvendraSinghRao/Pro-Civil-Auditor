@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -125,7 +127,8 @@
       align-items: center;
     }
 
-    #deleteModalContent {
+    #deleteModalContent,
+    #groupSettingsContent {
       background: white;
       padding: 20px;
       border-radius: 10px;
@@ -154,8 +157,15 @@
       border-bottom: 1px solid #eee;
     }
 
-    #deleteModalContent button {
-      margin-left: 5px;
+    #sortableGroupList {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    #sortableGroupList li {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      cursor: grab;
     }
 
     @media (max-width: 500px) {
@@ -219,7 +229,7 @@
   <div id="groupSettingsModal">
     <div id="groupSettingsContent">
       <h3>Reorder Groups</h3>
-      <ul id="sortableGroupList" style="list-style:none; padding:0;"></ul>
+      <ul id="sortableGroupList"></ul>
       <div style="margin-top:10px; text-align:right;">
         <button onclick="saveGroupOrder()">Save</button>
         <button onclick="closeGroupSettings()">Cancel</button>
@@ -227,186 +237,225 @@
     </div>
   </div>
 
-  <script>
-    let allGroups = [];
-    let currentEntries = [], entryCount = 0, currentTotalInches = 0;
-    let selectedUnit = 'sq.ft';
-    let backHandler = null;
+<script>
+  let allGroups = [];
+  let currentEntries = [], entryCount = 0, currentTotalInches = 0;
+  let selectedUnit = 'sq.ft';
+  let backHandler = null;
 
-    function toggleUnitDropdown() {
-      const dropdown = document.getElementById("unitDropdown");
-      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  function toggleUnitDropdown() {
+    const dropdown = document.getElementById("unitDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  function selectUnit(unit) {
+    selectedUnit = unit;
+    document.getElementById("selectedUnit").innerText = unit;
+    document.getElementById("unitDropdown").style.display = "none";
+  }
+
+  function convertFromInches(sqInches) {
+    switch (selectedUnit) {
+      case 'sq.ft': return (sqInches / 144).toFixed(2) + ' sq.ft';
+      case 'sq.in': return sqInches.toFixed(2) + ' sq.in';
+      case 'sq.m': return (sqInches * 0.00064516).toFixed(4) + ' sq.m';
+      case 'sq.cm': return (sqInches * 6.4516).toFixed(2) + ' sq.cm';
+      case 'sq.mm': return (sqInches * 645.16).toFixed(1) + ' sq.mm';
+      case 'normal': return sqInches.toFixed(2);
+    }
+  }
+
+  function replaceDimensions(expr) {
+    expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
+    expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
+    expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
+    expr = expr.replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+    return expr;
+  }
+
+  function replaceGroupNames(expr) {
+    allGroups.forEach(group => {
+      const pattern = new RegExp(`\\b${group.name}\\b`, 'gi');
+      expr = expr.replace(pattern, `(${group.totalInches})`);
+    });
+    return expr;
+  }
+
+  function evaluateExpression() {
+    const input = document.getElementById("expressionInput").value.trim();
+    if (!input) return;
+    let parsed = input, result = 0;
+
+    if (selectedUnit === 'normal') {
+      parsed = replaceGroupNames(parsed);
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
+    } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+      parsed = replaceGroupNames(parsed).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
+      if (selectedUnit === 'sq.m') result *= 1550.0031;
+      if (selectedUnit === 'sq.cm') result *= 0.15500031;
+      if (selectedUnit === 'sq.mm') result *= 0.00155;
+    } else {
+      parsed = replaceDimensions(input);
+      parsed = replaceGroupNames(parsed);
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
     }
 
-    function selectUnit(unit) {
-      selectedUnit = unit;
-      document.getElementById("selectedUnit").innerText = unit;
-      document.getElementById("unitDropdown").style.display = "none";
-    }
+    entryCount++;
+    const resultText = convertFromInches(result);
+    const entryText = `#${entryCount}) ${input} = ${resultText}`;
+    currentEntries.push(entryText);
+    if (selectedUnit !== 'normal') currentTotalInches += result;
 
-    function convertFromInches(sqInches) {
-      switch (selectedUnit) {
-        case 'sq.ft': return (sqInches / 144).toFixed(2) + ' sq.ft';
-        case 'sq.in': return sqInches.toFixed(2) + ' sq.in';
-        case 'sq.m': return (sqInches * 0.00064516).toFixed(4) + ' sq.m';
-        case 'sq.cm': return (sqInches * 6.4516).toFixed(2) + ' sq.cm';
-        case 'sq.mm': return (sqInches * 645.16).toFixed(1) + ' sq.mm';
-        case 'normal': return sqInches.toFixed(2);
-      }
-    }
+    const entryDiv = document.createElement("div");
+    entryDiv.className = "entry";
+    entryDiv.innerText = entryText;
+    document.getElementById("entries").appendChild(entryDiv);
+    document.getElementById("expressionInput").value = "";
+  }
 
-    function replaceDimensions(expr) {
-      expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
-      expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
-      expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
-      expr = expr.replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
-      return expr;
-    }
+  function resetEntries() {
+    currentEntries = [];
+    currentTotalInches = 0;
+    entryCount = 0;
+    document.getElementById("entries").innerHTML = "";
+  }
 
-    function replaceGroupNames(expr) {
-      allGroups.forEach(group => {
-        const pattern = new RegExp(`\\b${group.name}\\b`, 'gi');
-        expr = expr.replace(pattern, `(${group.totalInches})`);
+  function groupTotal() {
+    const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
+    const group = { name: groupName, entries: [...currentEntries], totalInches: currentTotalInches };
+    allGroups.push(group);
+    saveGroupsToStorage();
+    renderGroups();
+    resetEntries();
+    document.getElementById("groupName").value = "";
+  }
+
+  function renderGroups() {
+    const groupsDiv = document.getElementById("groups");
+    groupsDiv.innerHTML = "";
+    allGroups.forEach((group, index) => {
+      const groupDiv = document.createElement("div");
+      groupDiv.className = "group-total";
+      let html = `📦 <strong contenteditable="true" onblur="renameGroup(${index}, this.innerText.trim())">${group.name}</strong><br>`;
+      group.entries.forEach((entry, entryIndex) => {
+        html += `<div contenteditable="true" onblur="updateEntry(${index}, ${entryIndex}, this.innerText)">${entry}</div>`;
       });
-      return expr;
-    }
+      if (group.entries.length > 0)
+        html += `🧮 <strong>Total = ${convertFromInches(group.totalInches)}</strong>`;
+      groupDiv.innerHTML = html;
+      groupsDiv.appendChild(groupDiv);
+    });
+  }
 
-    function evaluateExpression() {
-      const input = document.getElementById("expressionInput").value.trim();
-      if (!input) return;
-      let parsed = input, result = 0;
-
-      if (selectedUnit === 'normal') {
-        parsed = replaceGroupNames(parsed);
-        try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
-      } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
-        parsed = replaceGroupNames(parsed).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
-        try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
-        if (selectedUnit === 'sq.m') result *= 1550.0031;
-        if (selectedUnit === 'sq.cm') result *= 0.15500031;
-        if (selectedUnit === 'sq.mm') result *= 0.00155;
-      } else {
-        parsed = replaceDimensions(input);
-        parsed = replaceGroupNames(parsed);
-        try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
-      }
-
-      entryCount++;
-      const resultText = convertFromInches(result);
-      const entryText = `#${entryCount}) ${input} = ${resultText}`;
-      currentEntries.push(entryText);
-      if (selectedUnit !== 'normal') currentTotalInches += result;
-
-      const entryDiv = document.createElement("div");
-      entryDiv.className = "entry";
-      entryDiv.innerText = entryText;
-      document.getElementById("entries").appendChild(entryDiv);
-      document.getElementById("expressionInput").value = "";
-    }
-
-    function resetEntries() {
-      currentEntries = [];
-      currentTotalInches = 0;
-      entryCount = 0;
-      document.getElementById("entries").innerHTML = "";
-    }
-
-    function groupTotal() {
-      const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
-      const group = { name: groupName, entries: [...currentEntries], totalInches: currentTotalInches };
-      allGroups.push(group);
+  function renameGroup(index, newName) {
+    if (newName !== "") {
+      allGroups[index].name = newName;
       saveGroupsToStorage();
-      renderGroups();
-      resetEntries();
-      document.getElementById("groupName").value = "";
     }
+  }
 
-    function renderGroups() {
-      const groupsDiv = document.getElementById("groups");
-      groupsDiv.innerHTML = "";
-      allGroups.forEach((group, index) => {
-        const groupDiv = document.createElement("div");
-        groupDiv.className = "group-total";
-        let html = `📦 <strong contenteditable="true" onblur="renameGroup(${index}, this.innerText.trim())">${group.name}</strong><br>`;
-        group.entries.forEach((entry, entryIndex) => {
-          html += `<div contenteditable="true" onblur="updateEntry(${index}, ${entryIndex}, this.innerText)">${entry}</div>`;
-        });
-        if (group.entries.length > 0)
-          html += `🧮 <strong>Total = ${convertFromInches(group.totalInches)}</strong>`;
-        groupDiv.innerHTML = html;
-        groupsDiv.appendChild(groupDiv);
-      });
-    }
+  function updateEntry(groupIndex, entryIndex, newText) {
+    allGroups[groupIndex].entries[entryIndex] = newText;
+    const values = allGroups[groupIndex].entries.map(text => {
+      const match = text.match(/=\s*(\d+(\.\d+)?)/);
+      return match ? parseFloat(match[1]) : 0;
+    });
+    allGroups[groupIndex].totalInches = values.reduce((sum, val) => sum + val, 0);
+    saveGroupsToStorage();
+    renderGroups();
+  }
 
-    function renameGroup(index, newName) {
-      if (newName !== "") {
-        allGroups[index].name = newName;
-        saveGroupsToStorage();
-      }
-    }
+  function openDeleteModal() {
+    const listContainer = document.getElementById("deleteList");
+    listContainer.innerHTML = "";
+    allGroups.forEach((group, index) => {
+      const div = document.createElement("div");
+      div.innerHTML = `<span>${group.name}</span><input type="checkbox" value="${index}" />`;
+      listContainer.appendChild(div);
+    });
+    document.getElementById("deleteModal").style.display = "flex";
 
-    function updateEntry(groupIndex, entryIndex, newText) {
-      allGroups[groupIndex].entries[entryIndex] = newText;
-      const values = allGroups[groupIndex].entries.map(text => {
-        const match = text.match(/=\s*(\d+(\.\d+)?)/);
-        return match ? parseFloat(match[1]) : 0;
-      });
-      allGroups[groupIndex].totalInches = values.reduce((sum, val) => sum + val, 0);
-      saveGroupsToStorage();
-      renderGroups();
-    }
-
-    function openDeleteModal() {
-      const listContainer = document.getElementById("deleteList");
-      listContainer.innerHTML = "";
-      allGroups.forEach((group, index) => {
-        const div = document.createElement("div");
-        div.innerHTML = `<span>${group.name}</span><input type="checkbox" value="${index}" />`;
-        listContainer.appendChild(div);
-      });
-      document.getElementById("deleteModal").style.display = "flex";
-
-      history.pushState({ modalOpen: true }, "");
-      backHandler = function () {
-        closeDeleteModal();
-        history.back();
-      };
-      window.addEventListener("popstate", backHandler);
-    }
-
-    function closeDeleteModal() {
-      document.getElementById("deleteModal").style.display = "none";
-      if (backHandler) window.removeEventListener("popstate", backHandler);
-      backHandler = null;
-    }
-
-    function deleteSelectedGroups() {
-      const checkboxes = document.querySelectorAll("#deleteList input[type='checkbox']:checked");
-      const indexesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => b - a);
-      indexesToDelete.forEach(index => allGroups.splice(index, 1));
-      saveGroupsToStorage();
-      renderGroups();
+    history.pushState({ modalOpen: true }, "");
+    backHandler = function () {
       closeDeleteModal();
-    }
-
-    function saveGroupsToStorage() {
-      localStorage.setItem("civilGroups", JSON.stringify(allGroups));
-    }
-
-    function loadGroupsFromStorage() {
-      const saved = localStorage.getItem("civilGroups");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        parsed.forEach(g => allGroups.push(g));
-        renderGroups();
-      }
-    }
-
-    window.onload = loadGroupsFromStorage;
-    window.onclick = function (event) {
-      if (!event.target.closest('#exportBtn')) document.getElementById("exportDropdown").style.display = "none";
-      if (!event.target.matches('.unit-btn')) document.getElementById("unitDropdown").style.display = "none";
+      history.back();
     };
-  </script>
+    window.addEventListener("popstate", backHandler);
+  }
+
+  function closeDeleteModal() {
+    document.getElementById("deleteModal").style.display = "none";
+    if (backHandler) window.removeEventListener("popstate", backHandler);
+    backHandler = null;
+  }
+
+  function deleteSelectedGroups() {
+    const checkboxes = document.querySelectorAll("#deleteList input[type='checkbox']:checked");
+    const indexesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => b - a);
+    indexesToDelete.forEach(index => allGroups.splice(index, 1));
+    saveGroupsToStorage();
+    renderGroups();
+    closeDeleteModal();
+  }
+
+  function openGroupSettings() {
+    const ul = document.getElementById("sortableGroupList");
+    ul.innerHTML = "";
+    allGroups.forEach((group, index) => {
+      const li = document.createElement("li");
+      li.textContent = group.name;
+      li.setAttribute("data-index", index);
+      ul.appendChild(li);
+    });
+
+    $("#sortableGroupList").sortable();
+    document.getElementById("groupSettingsModal").style.display = "flex";
+
+    history.pushState({ modalOpen: true }, "");
+    backHandler = function () {
+      closeGroupSettings();
+      history.back();
+    };
+    window.addEventListener("popstate", backHandler);
+  }
+
+  function closeGroupSettings() {
+    document.getElementById("groupSettingsModal").style.display = "none";
+    if (backHandler) window.removeEventListener("popstate", backHandler);
+    backHandler = null;
+  }
+
+  function saveGroupOrder() {
+    const newOrder = [];
+    document.querySelectorAll("#sortableGroupList li").forEach(li => {
+      const index = parseInt(li.getAttribute("data-index"));
+      newOrder.push(allGroups[index]);
+    });
+    allGroups = newOrder;
+    saveGroupsToStorage();
+    renderGroups();
+    closeGroupSettings();
+  }
+
+  function saveGroupsToStorage() {
+    localStorage.setItem("civilGroups", JSON.stringify(allGroups));
+  }
+
+  function loadGroupsFromStorage() {
+    const saved = localStorage.getItem("civilGroups");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      parsed.forEach(g => allGroups.push(g));
+      renderGroups();
+    }
+  }
+
+  window.onload = loadGroupsFromStorage;
+  window.onclick = function (event) {
+    if (!event.target.closest('#exportBtn')) document.getElementById("exportDropdown").style.display = "none";
+    if (!event.target.matches('.unit-btn')) document.getElementById("unitDropdown").style.display = "none";
+  };
+</script>
 </body>
 </html>
