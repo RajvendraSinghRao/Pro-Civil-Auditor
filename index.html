@@ -1,21 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Home Page</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pro Civil Auditor</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f3d66; /* Match logo's blue */
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-top: 20px;
+    }
+
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      background-color: #ffffff;
+      color: #0f3d66;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    @media (max-width: 600px) {
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .btn {
+        width: 80%;
+        padding: 14px;
+        font-size: 1.1rem;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- Use your logo -->
+  <img src="assets_task_01k10bwwhfedha45fzcx79afag_1753432932_img_1.webp" alt="Pro Civil Auditor Logo" class="logo" />
+
   <h2>Pro Civil Auditor</h2>
-  <button onclick="goToCalculator()">Area Calculator</button>
+
+  <button class="btn" onclick="goToCalculator()">Open Area Calculator</button>
 
   <script>
     function goToCalculator() {
-      // Save entry flag
       localStorage.setItem("entryAllowed", "true");
 
-      // Debug log (optional)
-      console.log("Registered?", localStorage.getItem("registeredUser"));
-
-      // Check registration and redirect
       if (localStorage.getItem("registeredUser")) {
         window.location.href = "area_calculator.html";
       } else {
