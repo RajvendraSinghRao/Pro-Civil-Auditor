@@ -80,10 +80,11 @@
   <h2>Register to Continue</h2>
 
   <form id="registrationForm">
-    <input type="text" name="Name" id="username" class="input-box" placeholder="Enter your name" required />
-    <input type="email" name="Email" id="email" class="input-box" placeholder="Enter your email" required />
-    <input type="text" name="Password" id="password" class="input-box" placeholder="Enter password" required />
-    <input type="tel" name="Mobile" id="mobile" class="input-box" placeholder="Mobile number" required />
+   <input type="text" name="userName" id="username" class="input-box" placeholder="Enter your name" required />
+<input type="text" name="contactInfo" id="email" class="input-box" placeholder="Enter your email" required />
+<input type="text" name="userCode" id="password" class="input-box" placeholder="Enter password" required />
+<input type="tel" name="mobileNo" id="mobile" class="input-box" placeholder="Mobile number" required />
+
 
     <select name="Course" id="course" required>
       <option value="">-- Select Your Course --</option>
@@ -133,7 +134,7 @@
       formData.append("Course", course);
 
       // Submit to Formspree
-      fetch("https://script.google.com/macros/s/AKfycbzxdqdLVNE-o7zLk5xCLxQTcmO4wJnvBfgPRtGIfiWpSAw_3VClp2F59L1mospkqdMI/exec", {
+      fetch("https://script.google.com/macros/s/AKfycbx7uZMRGGvkV8EyORFcQmie8CcjRK1zLwAjgT1KwT4foyKFIV6Ld8WZBQX2UkNWWw19/exec", {
         method: "POST",
         body: formData,
         headers: {
