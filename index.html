@@ -12,9 +12,12 @@
       // Mark that user came from home page
       localStorage.setItem("entryAllowed", "true");
 
-      // Check if user is registered
+      // Debug info
+      console.log("User registered?", localStorage.getItem("registeredUser"));
+
+      // Redirect based on registration status
       if (localStorage.getItem("registeredUser")) {
-        window.location.href = "area calculator.html";
+        window.location.href = "area_calculator.html";
       } else {
         window.location.href = "registration.html";
       }
