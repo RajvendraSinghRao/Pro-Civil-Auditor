@@ -9,14 +9,16 @@
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f3d66; /* Match logo's blue */
+      background-color: #0f3d66;
       color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
+      padding: 20px;
       text-align: center;
+      box-sizing: border-box;
     }
 
     h2 {
@@ -24,7 +26,7 @@
       margin-bottom: 20px;
     }
 
-    .input-box {
+    .input-box, select {
       padding: 12px;
       font-size: 1rem;
       border-radius: 6px;
@@ -33,6 +35,7 @@
       width: 80%;
       max-width: 300px;
       margin-bottom: 15px;
+      box-sizing: border-box;
     }
 
     .btn {
@@ -60,7 +63,7 @@
         font-size: 1.1rem;
       }
 
-      .input-box {
+      .input-box, select {
         font-size: 1.1rem;
       }
     }
@@ -68,7 +71,6 @@
 </head>
 <body>
   <script>
-    // Block direct access
     if (!localStorage.getItem("entryAllowed")) {
       alert("Please start from the Home Page.");
       window.location.href = "index.html";
@@ -76,20 +78,80 @@
   </script>
 
   <h2>Register to Continue</h2>
-  <input type="text" id="username" class="input-box" placeholder="Enter your name" />
-  <button class="btn" onclick="register()">Register</button>
+
+  <form id="registrationForm">
+    <input type="text" name="Name" id="username" class="input-box" placeholder="Enter your name" required />
+    <input type="email" name="Email" id="email" class="input-box" placeholder="Enter your email" required />
+    <input type="password" name="Password" id="password" class="input-box" placeholder="Create a password" required />
+    <input type="tel" name="Mobile" id="mobile" class="input-box" placeholder="Mobile number" required />
+
+    <select name="Course" id="course" required>
+      <option value="">-- Select Your Course --</option>
+      <option>Civil Diploma Pursuing</option>
+      <option>Civil Diploma Completed</option>
+      <option>Civil Degree Pursuing</option>
+      <option>Civil Degree Completed</option>
+      <option>Interior Diploma Pursuing</option>
+      <option>Interior Diploma Completed</option>
+      <option>Interior Degree Pursuing</option>
+      <option>Interior Degree Completed</option>
+      <option>Architecture Student</option>
+      <option>Architecture Graduate</option>
+      <option>Freelancer (Civil/Interior)</option>
+      <option>Working Professional</option>
+    </select>
+
+    <button class="btn" type="submit">Register</button>
+  </form>
 
   <script>
-    function register() {
+    const form = document.getElementById("registrationForm");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault(); // prevent default form submission
+
       const name = document.getElementById("username").value.trim();
-      if (name) {
-        localStorage.setItem("registeredUser", name);
-        window.location.href = "area_calculator.html";
-      } else {
-        alert("Please enter your name.");
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const mobile = document.getElementById("mobile").value.trim();
+      const course = document.getElementById("course").value;
+
+      if (!name || !email || !password || !mobile || !course) {
+        alert("Please fill in all fields.");
+        return;
       }
-    }
+
+      // Save locally
+      localStorage.setItem("registeredUser", name);
+
+      // Prepare form data for Formspree
+      const formData = new FormData();
+      formData.append("Name", name);
+      formData.append("Email", email);
+      formData.append("Password", password);
+      formData.append("Mobile", mobile);
+      formData.append("Course", course);
+
+      // Submit to Formspree
+      fetch("https://formspree.io/f/YOUR_FORM_ID", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      })
+        .then((response) => {
+          if (response.ok) {
+            window.location.href = "area_calculator.html";
+          } else {
+            alert("There was a problem submitting the form.");
+          }
+        })
+        .catch((error) => {
+          alert("Error submitting form.");
+          console.error(error);
+        });
+    });
   </script>
 </body>
 </html>
-
