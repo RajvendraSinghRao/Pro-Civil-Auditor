@@ -5,7 +5,7 @@
 </head>
 <body>
   <h2>Pro Civil Auditor</h2>
-  <button onclick="goToCalculator()">Area Calculator</button>
+  <button onclick="ara calculator()">Area Calculator</button>
 
   <script>
     function goToCalculator() {
@@ -13,14 +13,11 @@
       localStorage.setItem("entryAllowed", "true");
 
       if (localStorage.getItem("registeredUser")) {
-        // Already registered
-        window.location.href = "area calculator";
+        window.location.href = "area%20calculator";
       } else {
-        // Not registered yet
         window.location.href = "registration";
       }
     }
   </script>
 </body>
 </html>
-
