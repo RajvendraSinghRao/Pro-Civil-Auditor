@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pro Civil Auditor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    button {
+      flex: 1 1 48%;
+      padding: 10px;
+      font-size: 15px;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    .entry, .group-total {
+      font-size: 16px;
+      background-color: #e6e6e6;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    .group-total {
+      background-color: #c9fbc9;
+      font-weight: bold;
+    }
+    .unit-selector {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .unit-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      background-color: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      text-align: left;
+    }
+    .unit-options {
+      position: absolute;
+      width: 100%;
+      background-color: #fff;
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      z-index: 1;
+      display: none;
+    }
+    .unit-options div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .unit-options div:hover {
+      background-color: #eee;
+    }
+    .export-dropdown {
+      position: relative;
+      flex: 1 1 100%;
+    }
+    .export-dropdown-menu {
+      display: none;
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      width: 100%;
+      z-index: 2;
+      border-radius: 5px;
+    }
+    .export-dropdown-menu div {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .export-dropdown-menu div:hover {
+      background-color: #eee;
+    }
+
+    /* Modal Styling */
+    #deleteModal, #groupSettingsModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #deleteModalContent,
+    #groupSettingsContent {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #deleteList {
+      flex: 1;
+      overflow-y: auto;
+      margin: 10px 0;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+
+    #deleteList div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    #sortableGroupList {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    #sortableGroupList li {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      cursor: grab;
+    }
+
+    @media (max-width: 500px) {
+      button {
+        flex: 1 1 100%;
+      }
+    }
+.drag-handle {
+  cursor: grab;
+  padding-right: 10px;
+  font-size: 18px;
+  user-select: none;
+  color: #666;
+}
+
+    
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Pro Civil Auditor</h2>
+
+    <input type="text" id="expressionInput" placeholder="Enter expression" />
+    <input type="text" id="groupName" placeholder="Group name (optional before grouping)" />
+
+    <div class="unit-selector">
+      <button class="unit-btn" onclick="toggleUnitDropdown()">Unit: <span id="selectedUnit">sq.ft</span> ▼</button>
+      <div class="unit-options" id="unitDropdown">
+        <div onclick="selectUnit('sq.ft')">sq.ft</div>
+        <div onclick="selectUnit('sq.in')">sq.in</div>
+        <div onclick="selectUnit('sq.m')">sq.m</div>
+        <div onclick="selectUnit('sq.cm')">sq.cm</div>
+        <div onclick="selectUnit('sq.mm')">sq.mm</div>
+        <div onclick="selectUnit('normal')">Normal Math</div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button onclick="evaluateExpression()">Calculate</button>
+      <button onclick="resetEntries()">Reset Entry</button>
+      <button onclick="groupTotal()">Group Total</button>
+      <div class="export-dropdown">
+        <button onclick="toggleExportDropdown()" id="exportBtn">Export ▼</button>
+        <div id="exportDropdown" class="export-dropdown-menu">
+          <div onclick="exportToPDF()">📄 Export as PDF</div>
+          <div onclick="exportToExcel()">📊 Export as Excel (.xlsx)</div>
+        </div>
+      </div>
+      <button onclick="openDeleteModal()">🗑️ Delete Group(s)</button>
+      <button onclick="openGroupSettings()">⚙️ Group Settings</button>
+    </div>
+
+    <div id="entries"></div>
+    <div id="groups"></div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div id="deleteModal">
+    <div id="deleteModalContent">
+      <h3>Select Groups to Delete</h3>
+      <div id="deleteList"></div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button onclick="deleteSelectedGroups()">Delete Selected</button>
+        <button onclick="closeDeleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Settings Modal -->
+  <div id="groupSettingsModal">
+    <div id="groupSettingsContent">
+      <h3>Reorder Groups</h3>
+      <ul id="sortableGroupList"></ul>
+      <div style="margin-top:10px; text-align:right;">
+        <button onclick="saveGroupOrder()">Save</button>
+        <button onclick="closeGroupSettings()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let allGroups = [];
+  let currentEntries = [], entryCount = 0, currentTotalInches = 0;
+  let selectedUnit = 'sq.ft';
+  let backHandler = null;
+
+  function toggleUnitDropdown() {
+    const dropdown = document.getElementById("unitDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  function selectUnit(unit) {
+    selectedUnit = unit;
+    document.getElementById("selectedUnit").innerText = unit;
+    document.getElementById("unitDropdown").style.display = "none";
+  }
+
+  function convertFromInches(sqInches) {
+    switch (selectedUnit) {
+      case 'sq.ft': return (sqInches / 144).toFixed(2) + ' sq.ft';
+      case 'sq.in': return sqInches.toFixed(2) + ' sq.in';
+      case 'sq.m': return (sqInches * 0.00064516).toFixed(4) + ' sq.m';
+      case 'sq.cm': return (sqInches * 6.4516).toFixed(2) + ' sq.cm';
+      case 'sq.mm': return (sqInches * 645.16).toFixed(1) + ' sq.mm';
+      case 'normal': return sqInches.toFixed(2);
+    }
+  }
+
+  function replaceDimensions(expr) {
+    expr = expr.replace(/(\d+)'(\d+)/g, (_, ft, inch) => `(${parseInt(ft) * 12 + parseInt(inch)})`);
+    expr = expr.replace(/(\d+(\.\d+)?)'/g, (_, num) => `(${parseFloat(num) * 12})`);
+    expr = expr.replace(/'(\d+(\.\d+)?)/g, (_, num) => `(${parseFloat(num)})`);
+    expr = expr.replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+    return expr;
+  }
+
+  function replaceGroupNames(expr) {
+    allGroups.forEach(group => {
+      const pattern = new RegExp(`\\b${group.name}\\b`, 'gi');
+      expr = expr.replace(pattern, `(${group.totalInches})`);
+    });
+    return expr;
+  }
+
+  function evaluateExpression() {
+    const input = document.getElementById("expressionInput").value.trim();
+    if (!input) return;
+    let parsed = input, result = 0;
+
+    if (selectedUnit === 'normal') {
+      parsed = replaceGroupNames(parsed);
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
+    } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+      parsed = replaceGroupNames(parsed).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
+      if (selectedUnit === 'sq.m') result *= 1550.0031;
+      if (selectedUnit === 'sq.cm') result *= 0.15500031;
+      if (selectedUnit === 'sq.mm') result *= 0.00155;
+    } else {
+      parsed = replaceDimensions(input);
+      parsed = replaceGroupNames(parsed);
+      try { result = eval(parsed); } catch { alert("❌ Invalid expression."); return; }
+    }
+
+    entryCount++;
+    const resultText = convertFromInches(result);
+    const entryText = `#${entryCount}) ${input} = ${resultText}`;
+    currentEntries.push(entryText);
+    if (selectedUnit !== 'normal') currentTotalInches += result;
+
+    const entryDiv = document.createElement("div");
+    entryDiv.className = "entry";
+    entryDiv.innerText = entryText;
+    document.getElementById("entries").appendChild(entryDiv);
+    document.getElementById("expressionInput").value = "";
+  }
+
+  function resetEntries() {
+    currentEntries = [];
+    currentTotalInches = 0;
+    entryCount = 0;
+    document.getElementById("entries").innerHTML = "";
+  }
+
+  function groupTotal() {
+    const groupName = document.getElementById("groupName").value.trim() || `Group ${allGroups.length + 1}`;
+    const group = { name: groupName, entries: [...currentEntries], totalInches: currentTotalInches };
+    allGroups.push(group);
+    saveGroupsToStorage();
+    renderGroups();
+    resetEntries();
+    document.getElementById("groupName").value = "";
+  }
+
+  function renderGroups() {
+    const groupsDiv = document.getElementById("groups");
+    groupsDiv.innerHTML = "";
+    allGroups.forEach((group, index) => {
+      const groupDiv = document.createElement("div");
+      groupDiv.className = "group group-total";
+      let html = `📦 <strong contenteditable="true" onblur="renameGroup(${index}, this.innerText.trim())">${group.name}</strong><br>`;
+      group.entries.forEach((entry, entryIndex) => {
+        html += `<div contenteditable="true" onblur="updateEntry(${index}, ${entryIndex}, this.innerText)">${entry}</div>`;
+      });
+      if (group.entries.length > 0)
+        html += `🧮 <strong>Total = ${convertFromInches(group.totalInches)}</strong>`;
+      groupDiv.innerHTML = html;
+      groupsDiv.appendChild(groupDiv);
+    });
+  }
+
+  function renameGroup(index, newName) {
+    if (newName !== "") {
+      allGroups[index].name = newName;
+      saveGroupsToStorage();
+    }
+  }
+
+function updateEntry(groupIndex, entryIndex, newText) {
+  const entryPrefixMatch = newText.match(/^#\d+\)\s*(.*)=/);
+  if (!entryPrefixMatch) {
+    alert("Invalid format. Use the format: #n) expression = result");
+    return;
+  }
+
+  const expr = entryPrefixMatch[1].trim();
+  let result = 0;
+
+  try {
+    let parsed = expr;
+    if (selectedUnit === 'normal') {
+      parsed = replaceGroupNames(parsed);
+      result = eval(parsed);
+    } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+      parsed = replaceGroupNames(parsed).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+      result = eval(parsed);
+      if (selectedUnit === 'sq.m') result *= 1550.0031;
+      if (selectedUnit === 'sq.cm') result *= 0.15500031;
+      if (selectedUnit === 'sq.mm') result *= 0.00155;
+    } else {
+      parsed = replaceDimensions(expr);
+      parsed = replaceGroupNames(parsed);
+      result = eval(parsed);
+    }
+
+    const updatedEntry = `#${entryIndex + 1}) ${expr} = ${convertFromInches(result)}`;
+    allGroups[groupIndex].entries[entryIndex] = updatedEntry;
+
+    // ✅ Recalculate total from parsed expressions
+    let total = 0;
+    allGroups[groupIndex].entries.forEach(entry => {
+      const expressionMatch = entry.match(/^#\d+\)\s*(.*)=/);
+      if (expressionMatch) {
+        const exp = expressionMatch[1].trim();
+        try {
+          let parsedExp = exp;
+          let value = 0;
+          if (selectedUnit === 'normal') {
+            parsedExp = replaceGroupNames(parsedExp);
+            value = eval(parsedExp);
+          } else if (['sq.m', 'sq.cm', 'sq.mm'].includes(selectedUnit)) {
+            parsedExp = replaceGroupNames(parsedExp).replace(/[×xX]/g, '*').replace(/[÷/]/g, '/');
+            value = eval(parsedExp);
+            if (selectedUnit === 'sq.m') value *= 1550.0031;
+            if (selectedUnit === 'sq.cm') value *= 0.15500031;
+            if (selectedUnit === 'sq.mm') value *= 0.00155;
+          } else {
+            parsedExp = replaceDimensions(parsedExp);
+            parsedExp = replaceGroupNames(parsedExp);
+            value = eval(parsedExp);
+          }
+          total += value;
+        } catch (e) {
+          console.warn("Skipping invalid entry in total calc:", entry);
+        }
+      }
+    });
+
+    allGroups[groupIndex].totalInches = total;
+    saveGroupsToStorage();
+    renderGroups();
+  } catch (e) {
+    alert("❌ Invalid expression while editing.");
+  }
+}
+
+
+  function openDeleteModal() {
+    const listContainer = document.getElementById("deleteList");
+    listContainer.innerHTML = "";
+    allGroups.forEach((group, index) => {
+      const div = document.createElement("div");
+      div.innerHTML = `<span>${group.name}</span><input type="checkbox" value="${index}" />`;
+      listContainer.appendChild(div);
+    });
+    document.getElementById("deleteModal").style.display = "flex";
+
+    history.pushState({ modalOpen: true }, "");
+    backHandler = function () {
+      closeDeleteModal();
+      history.back();
+    };
+    window.addEventListener("popstate", backHandler);
+  }
+
+  function closeDeleteModal() {
+    document.getElementById("deleteModal").style.display = "none";
+    if (backHandler) window.removeEventListener("popstate", backHandler);
+    backHandler = null;
+  }
+
+  function deleteSelectedGroups() {
+    const checkboxes = document.querySelectorAll("#deleteList input[type='checkbox']:checked");
+    const indexesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => b - a);
+    indexesToDelete.forEach(index => allGroups.splice(index, 1));
+    saveGroupsToStorage();
+    renderGroups();
+    closeDeleteModal();
+  }
+
+  function openGroupSettings() {
+    const ul = document.getElementById("sortableGroupList");
+   ul.innerHTML = "";
+allGroups.forEach((group, index) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="drag-handle">☰</span> <span>${group.name}</span>`;
+  li.setAttribute("data-index", index);
+  ul.appendChild(li);
+});
+
+
+
+    $("#sortableGroupList").sortable({
+  handle: ".drag-handle"
+});
+
+    document.getElementById("groupSettingsModal").style.display = "flex";
+
+    history.pushState({ modalOpen: true }, "");
+    backHandler = function () {
+      closeGroupSettings();
+      history.back();
+    };
+    window.addEventListener("popstate", backHandler);
+  }
+
+  function closeGroupSettings() {
+    document.getElementById("groupSettingsModal").style.display = "none";
+    if (backHandler) window.removeEventListener("popstate", backHandler);
+    backHandler = null;
+  }
+
+  function saveGroupOrder() {
+    const newOrder = [];
+    document.querySelectorAll("#sortableGroupList li").forEach(li => {
+      const index = parseInt(li.getAttribute("data-index"));
+      newOrder.push(allGroups[index]);
+    });
+    allGroups = newOrder;
+    saveGroupsToStorage();
+    renderGroups();
+    closeGroupSettings();
+  }
+
+  function saveGroupsToStorage() {
+    localStorage.setItem("civilGroups", JSON.stringify(allGroups));
+  }
+
+  function loadGroupsFromStorage() {
+    const saved = localStorage.getItem("civilGroups");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      parsed.forEach(g => allGroups.push(g));
+      renderGroups();
+    }
+  }
+
+  window.onload = loadGroupsFromStorage;
+  window.onclick = function (event) {
+    if (!event.target.closest('#exportBtn')) document.getElementById("exportDropdown").style.display = "none";
+    if (!event.target.matches('.unit-btn')) document.getElementById("unitDropdown").style.display = "none";
+  };
+
+function exportToPDF() {
+  const doc = new window.jspdf.jsPDF();
+  let y = 10;
+  doc.setFontSize(14);
+  doc.text("Pro Civil Auditor", 10, y);
+  y += 10;
+  doc.setFontSize(11);
+
+  if (allGroups.length === 0) {
+    doc.text("No groups available to export.", 10, y);
+  } else {
+    allGroups.forEach(group => {
+      doc.setFont(undefined, "bold");
+      doc.text(`${group.name}`, 10, y);  // ✅ No number before group name
+      y += 7;
+
+      doc.setFont(undefined, "normal");
+      if (group.entries.length > 0) {
+        group.entries.forEach(entry => {
+          if (y > 280) {
+            doc.addPage();
+            y = 10;
+          }
+          doc.text("• " + entry, 12, y);
+          y += 6;
+        });
+
+        // ✅ Only show total if group has entries
+        doc.text(`Total: ${convertFromInches(group.totalInches)}`, 12, y);
+        y += 10;
+      } else {
+        y += 5; // small gap if group is empty
+      }
+    });
+  }
+
+  doc.save("Pro-Civil-Auditor.pdf");
+}
+
+
+  function exportToExcel() {
+  const wb = XLSX.utils.book_new(); // Create workbook
+
+  const data = [];
+
+  if (allGroups.length === 0) {
+    data.push(["No groups to export"]);
+  } else {
+    allGroups.forEach(group => {
+      data.push([group.name]); // ✅ Group name always
+
+      if (group.entries.length > 0) {
+        group.entries.forEach(entry => {
+          data.push([entry]); // ✅ All entries
+        });
+
+        // ✅ Total with unit
+        const unit = document.getElementById("unitSelect").value || "unit";
+        data.push([`Total: ${convertFromInches(group.totalInches)} ${unit}`]);
+      }
+
+      data.push([]); // ✅ Blank line between groups
+    });
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(data); // Convert to worksheet
+  XLSX.utils.book_append_sheet(wb, ws, "Audit Data");
+
+  XLSX.writeFile(wb, "Pro-Civil-Auditor.xlsx"); // Download file
+}
+
+
+
+  function toggleExportDropdown() {
+  const menu = document.getElementById("exportDropdown");
+  menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+
+  
+</script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+
+  <script>
+let startX = 0;
+let endX = 0;
+let currentGroupElement = null;
+
+<script>
+let groupCount = 0;
+let currentGroupElement = null;
+
+function addGroup() {
+  const groupName = prompt("Enter Group Name:");
+  if (groupName) {
+    const groups = JSON.parse(localStorage.getItem("groups") || "[]");
+    groups.push({ name: groupName, entries: [] });
+    localStorage.setItem("groups", JSON.stringify(groups));
+    renderGroups();
+  }
+}
+
+function renderGroups() {
+  const container = document.getElementById("groupContainer");
+  container.innerHTML = "";
+  const groups = JSON.parse(localStorage.getItem("groups") || "[]");
+
+  groups.forEach((group, groupIndex) => {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "group group-total"; // ✅ ADD .group here
+    groupDiv.setAttribute("data-group", groupIndex);
+
+    const title = document.createElement("div");
+    title.className = "group-title";
+    title.textContent = group.name;
+
+    groupDiv.appendChild(title);
+    container.appendChild(groupDiv);
+  });
+}
+
+    
+</script>
+
+  
+</body>
+</html>
