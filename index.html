@@ -9,13 +9,13 @@
 
   <script>
     function goToCalculator() {
-      // Mark that user came from home page
+      // Save entry flag
       localStorage.setItem("entryAllowed", "true");
 
-      // Debug info
-      console.log("User registered?", localStorage.getItem("registeredUser"));
+      // Debug log (optional)
+      console.log("Registered?", localStorage.getItem("registeredUser"));
 
-      // Redirect based on registration status
+      // Check registration and redirect
       if (localStorage.getItem("registeredUser")) {
         window.location.href = "area_calculator.html";
       } else {
