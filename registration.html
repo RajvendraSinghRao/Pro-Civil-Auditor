@@ -21,7 +21,7 @@
       const name = document.getElementById("username").value.trim();
       if (name) {
         localStorage.setItem("registeredUser", name);
-        window.location.href = "area calculator.html";
+        window.location.href = "area_calculator.html"; // ✅ Corrected filename
       } else {
         alert("Please enter your name.");
       }
