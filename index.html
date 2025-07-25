@@ -5,15 +5,16 @@
 </head>
 <body>
   <h2>Pro Civil Auditor</h2>
-  <button onclick="ara calculator()">Area Calculator</button>
+  <button onclick="goToCalculator()">Area Calculator</button>
 
   <script>
     function goToCalculator() {
-      // Allow user to continue to registration or calculator
+      // Mark that user came from home page
       localStorage.setItem("entryAllowed", "true");
 
+      // Check if user is registered
       if (localStorage.getItem("registeredUser")) {
-        window.location.href = "area%20calculator";
+        window.location.href = "area calculator";
       } else {
         window.location.href = "registration";
       }
