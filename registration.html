@@ -132,6 +132,10 @@
       })
         .then((response) => {
           if (response.ok) {
+            localStorage.setItem("registeredUser", "true");
+            localStorage.removeItem("entryAllowed");
+            localStorage.removeItem("fromHome");
+
             window.location.href = "area_calculator.html";
           } else {
             alert("There was a problem submitting the form.");
