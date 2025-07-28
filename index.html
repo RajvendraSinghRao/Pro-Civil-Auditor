@@ -69,6 +69,7 @@
   <script>
     function goToCalculator() {
       localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
 
       if (localStorage.getItem("registeredUser")) {
         window.location.href = "area_calculator.html";
