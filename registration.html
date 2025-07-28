@@ -72,10 +72,12 @@
 <body>
 
   <script>
-  if (!(localStorage.getItem("entryAllowed") && localStorage.getItem("fromHome"))) {
-    alert("Access Denied! Please start from the Home Page.");
-    window.location.href = "index.html";
-  }
+if (localStorage.getItem("entryAllowed") === "true") {
+  // nothing here
+} else { 
+alert("Please start from the Home Page.");
+  window.location.href = "index.html";
+}
 </script>
 
 
