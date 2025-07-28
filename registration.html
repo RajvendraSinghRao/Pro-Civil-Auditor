@@ -72,7 +72,7 @@
 <body>
 
   <script>
-if (localStorage.getItem("entryAllowed") === "true") {
+if (localStorage.getItem("entryAllowed") {
   // nothing here
 } else { 
 alert("Please start from the Home Page.");
@@ -139,9 +139,6 @@ alert("Please start from the Home Page.");
         .then((response) => {
           if (response.ok) {
             localStorage.setItem("registeredUser", "true");
-            localStorage.removeItem("entryAllowed");
-            localStorage.removeItem("fromHome");
-
             window.location.href = "area_calculator.html";
           } else {
             alert("There was a problem submitting the form.");
