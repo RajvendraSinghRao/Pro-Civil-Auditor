@@ -71,13 +71,7 @@
 </head>
 <body>
   <script>
-    
-
-     if (!(localStorage.getItem("entryAllowed") && localStorage.getItem("fromHome"))) {
-  alert("Access Denied! Please start from the Home Page.");
-  window.location.href = "index.html";
-}
-
+  
     
   </script>
 
@@ -147,7 +141,14 @@
           alert("Error submitting form.");
           console.error(error);
         });
-    });
+    });  
+
+    
+     if (!(localStorage.getItem("entryAllowed") && localStorage.getItem("fromHome"))) {
+  alert("Access Denied! Please start from the Home Page.");
+  window.location.href = "index.html";
+}
+
   </script>
 </body>
 </html>
