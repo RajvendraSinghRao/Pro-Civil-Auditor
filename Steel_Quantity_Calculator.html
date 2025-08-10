@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Steel Quantity Calculator</title>
+
+  <style>
+    :root{
+      --bg: #0f3d66;
+      --accent: #ffffff;
+      --card-bg: rgba(255,255,255,0.08);
+      --input-width: 90%;
+      --max-width: 420px;
+    }
+    body{
+      margin:0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--accent);
+      display:flex;
+      justify-content:center;
+      padding:20px;
+      box-sizing:border-box;
+      min-height:100vh;
+    }
+    .wrap{
+      width:100%;
+      max-width:900px;
+      display:grid;
+      grid-template-columns: 1fr 380px;
+      gap:20px;
+      align-items:start;
+    }
+    @media(max-width:900px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card-bg);
+      border-radius:12px;
+      padding:18px;
+      box-sizing:border-box;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+
+    h2{ margin: 0 0 12px 0; font-size:1.25rem; text-align:center; }
+    label{ display:block; margin:8px 0 6px 0; font-size:0.95rem; }
+    input[type="number"], select {
+      padding:10px;
+      border-radius:8px;
+      border:none;
+      outline:none;
+      width: var(--input-width);
+      max-width: var(--max-width);
+      font-size:1rem;
+      box-sizing:border-box;
+    }
+    .small{ font-size:0.85rem; color:rgba(255,255,255,0.85); margin-top:6px; }
+
+    .btn{
+      display:inline-block;
+      background:#ffffff;
+      color:var(--bg);
+      border:none;
+      padding:10px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      margin-top:12px;
+      font-weight:600;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn-ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.15); }
+
+    table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:0.95rem; }
+    td, th{ padding:8px 6px; border-bottom:1px dashed rgba(255,255,255,0.06); text-align:left; }
+    th{ text-align:left; font-weight:600; font-size:0.9rem; }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .note{ margin-top:10px; font-size:0.85rem; color:rgba(255,255,255,0.8); }
+
+  </style>
+
+  <!-- jsPDF (for PDF export) and SheetJS (for Excel/XLSX) from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div class="wrap">
+
+    <!-- LEFT: Inputs -->
+    <div class="card">
+      <h2>Steel Quantity Calculator</h2>
+
+      <label>Member Type</label>
+      <select id="memberType">
+        <option value="beam">Beam</option>
+        <option value="column">Column</option>
+        <option value="slab">Slab</option>
+      </select>
+
+      <div id="inputsArea" style="margin-top:12px;">
+        <!-- dynamic inputs will be injected here -->
+      </div>
+
+      <div style="margin-top:10px;">
+        <button class="btn" id="calcBtn">Calculate</button>
+        <div class="note">Weight formula used: <b>W(kg) = (d² / 162) × length(m)</b> where d = bar dia (mm).</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results & exports -->
+    <div class="card">
+      <h2>Result</h2>
+      <div id="resultArea">
+        <div class="small">No calculation yet.</div>
+      </div>
+
+      <div class="actions" style="margin-top:8px;">
+        <button class="btn btn-ghost" id="exportExcel">Export to Excel</button>
+        <button class="btn btn-ghost" id="exportPDF">Export to PDF</button>
+      </div>
+
+      <div class="note">Access is restricted: page checks registration from Home page.</div>
+    </div>
+
+  </div>
+
+<script>
+/* --- Access restriction (same logic as your site) --- */
+if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
+  alert("Access Denied. Please start from the Home Page.");
+  window.location.href = "index.html";
+}
+
+/* --- Helper functions --- */
+// weight per meter for bar dia d (mm)
+function weightPerMeter(d){ return (d*d) / 162.0; } // kg/m
+
+function toTon(kg){ return kg / 1000.0; }
+function fix(n, p=3){ return parseFloat(n.toFixed(p)); }
+
+/* --- DOM references --- */
+const inputsArea = document.getElementById('inputsArea');
+const memberType = document.getElementById('memberType');
+const calcBtn = document.getElementById('calcBtn');
+const resultArea = document.getElementById('resultArea');
+const exportExcelBtn = document.getElementById('exportExcel');
+const exportPDFBtn = document.getElementById('exportPDF');
+
+let lastResult = null; // will hold object for export
+
+/* --- Render input form depending on member type --- */
+function renderInputs(){
+  const t = memberType.value;
+  inputsArea.innerHTML = '';
+
+  if (t === 'beam'){
+    inputsArea.innerHTML = `
+      <label>Beam Length (m)</label>
+      <input type="number" id="beam_length" step="0.01" placeholder="e.g. 4">
+
+      <label>Beam Width (mm)</label>
+      <input type="number" id="beam_width" step="1" placeholder="e.g. 300">
+
+      <label>Beam Depth (mm)</label>
+      <input type="number" id="beam_depth" step="1" placeholder="e.g. 450">
+
+      <label>Main bars - number of bars</label>
+      <input type="number" id="beam_nbars" step="1" placeholder="e.g. 4">
+
+      <label>Main bar diameter (mm)</label>
+      <input type="number" id="beam_dbars" step="1" placeholder="e.g. 16">
+
+      <label>Stirrups spacing (mm)</label>
+      <input type="number" id="beam_st_spacing" step="1" placeholder="e.g. 150">
+
+      <label>Stirrup diameter (mm)</label>
+      <input type="number" id="beam_st_dia" step="1" placeholder="e.g. 8">
+      <div class="small">Note: stirrup length uses perimeter + hook allowance (~0.3 m)</div>
+    `;
+  }
+
+  if (t === 'column'){
+    inputsArea.innerHTML = `
+      <label>Column Height (m)</label>
+      <input type="number" id="col_height" step="0.01" placeholder="e.g. 3">
+
+      <label>Column Width (mm)</label>
+      <input type="number" id="col_width" step="1" placeholder="e.g. 300">
+
+      <label>Column Depth (mm)</label>
+      <input type="number" id="col_depth" step="1" placeholder="e.g. 300">
+
+      <label>Number of vertical bars</label>
+      <input type="number" id="col_nbars" step="1" placeholder="e.g. 4">
+
+      <label>Vertical bar diameter (mm)</label>
+      <input type="number" id="col_dbars" step="1" placeholder="e.g. 16">
+
+      <label>Stirrup spacing (mm)</label>
+      <input type="number" id="col_st_spacing" step="1" placeholder="e.g. 150">
+
+      <label>Stirrup diameter (mm)</label>
+      <input type="number" id="col_st_dia" step="1" placeholder="e.g. 8">
+      <div class="small">Note: stirrup length uses perimeter + hook allowance (~0.3 m)</div>
+    `;
+  }
+
+  if (t === 'slab'){
+    inputsArea.innerHTML = `
+      <label>Slab Length (m)</label>
+      <input type="number" id="slab_length" step="0.01" placeholder="e.g. 4">
+
+      <label>Slab Width (m)</label>
+      <input type="number" id="slab_width" step="0.01" placeholder="e.g. 3">
+
+      <label>Main bar spacing (mm)</label>
+      <input type="number" id="slab_main_space" step="1" placeholder="e.g. 150">
+
+      <label>Main bar diameter (mm)</label>
+      <input type="number" id="slab_main_dia" step="1" placeholder="e.g. 8">
+
+      <label>Distribution bar spacing (mm)</label>
+      <input type="number" id="slab_dist_space" step="1" placeholder="e.g. 200">
+
+      <label>Distribution bar diameter (mm)</label>
+      <input type="number" id="slab_dist_dia" step="1" placeholder="e.g. 8">
+      <div class="small">Spacing measured center-to-center. Calculator assumes both directions are provided.</div>
+    `;
+  }
+}
+
+memberType.addEventListener('change', renderInputs);
+renderInputs();
+
+/* --- Calculation logic for each member --- */
+function calculateBeam(){
+  const L = parseFloat(document.getElementById('beam_length').value);
+  const bw = parseFloat(document.getElementById('beam_width').value) / 1000.0; // m
+  const d = parseFloat(document.getElementById('beam_depth').value) / 1000.0; // m
+  const nBars = parseInt(document.getElementById('beam_nbars').value);
+  const barDia = parseFloat(document.getElementById('beam_dbars').value);
+  const stSpacing = parseFloat(document.getElementById('beam_st_spacing').value) / 1000.0; // m
+  const stDia = parseFloat(document.getElementById('beam_st_dia').value);
+
+  if (!L || !bw || !d || !nBars || !barDia || !stSpacing || !stDia) {
+    alert('Please fill all beam fields');
+    return null;
+  }
+
+  // Main bars length (approx) = number * beam length
+  const mainLengthTotal = nBars * L; // m
+
+  // Main bars weight
+  const wpm_main = weightPerMeter(barDia);
+  const mainWeightKg = mainLengthTotal * wpm_main;
+
+  // Stirrups: spacing along length -> number of stirrups = L / spacing (rounded up)
+  const nStirrups = Math.ceil(L / stSpacing);
+  // stirrup length approx = 2*(bw + d) + hook allowance (0.30 m)
+  const stirrupLength = 2 * (bw + d) + 0.30;
+  const totalStirrupLength = nStirrups * stirrupLength;
+  const stirrupWeightKg = totalStirrupLength * weightPerMeter(stDia);
+
+  const totalKg = mainWeightKg + stirrupWeightKg;
+
+  return {
+    type: 'Beam',
+    inputs: { L, bw, d, nBars, barDia, stSpacing, stDia },
+    mainLengthTotal: fix(mainLengthTotal,3),
+    mainWeightKg: fix(mainWeightKg,3),
+    nStirrups,
+    stirrupLength: fix(stirrupLength,3),
+    totalStirrupLength: fix(totalStirrupLength,3),
+    stirrupWeightKg: fix(stirrupWeightKg,3),
+    totalKg: fix(totalKg,3),
+    totalTon: fix(toTon(totalKg),4)
+  };
+}
+
+function calculateColumn(){
+  const H = parseFloat(document.getElementById('col_height').value);
+  const bw = parseFloat(document.getElementById('col_width').value) / 1000.0; // m
+  const d = parseFloat(document.getElementById('col_depth').value) / 1000.0; // m
+  const nBars = parseInt(document.getElementById('col_nbars').value);
+  const barDia = parseFloat(document.getElementById('col_dbars').value);
+  const stSpacing = parseFloat(document.getElementById('col_st_spacing').value) / 1000.0; // m
+  const stDia = parseFloat(document.getElementById('col_st_dia').value);
+
+  if (!H || !bw || !d || !nBars || !barDia || !stSpacing || !stDia) {
+    alert('Please fill all column fields');
+    return null;
+  }
+
+  // Vertical bars length = height (assume no lap/extra)
+  const vertLengthTotal = nBars * H;
+  const vertWeightKg = vertLengthTotal * weightPerMeter(barDia);
+
+  // Stirrups: count = H / spacing
+  const nStirrups = Math.ceil(H / stSpacing);
+  const stirrupLength = 2 * (bw + d) + 0.30; // hook allowance
+  const totalStirrupLength = nStirrups * stirrupLength;
+  const stirrupWeightKg = totalStirrupLength * weightPerMeter(stDia);
+
+  const totalKg = vertWeightKg + stirrupWeightKg;
+
+  return {
+    type: 'Column',
+    inputs: { H, bw, d, nBars, barDia, stSpacing, stDia },
+    vertLengthTotal: fix(vertLengthTotal,3),
+    vertWeightKg: fix(vertWeightKg,3),
+    nStirrups,
+    stirrupLength: fix(stirrupLength,3),
+    totalStirrupLength: fix(totalStirrupLength,3),
+    stirrupWeightKg: fix(stirrupWeightKg,3),
+    totalKg: fix(totalKg,3),
+    totalTon: fix(toTon(totalKg),4)
+  };
+}
+
+function calculateSlab(){
+  const L = parseFloat(document.getElementById('slab_length').value);
+  const W = parseFloat(document.getElementById('slab_width').value);
+  const mainSpace = parseFloat(document.getElementById('slab_main_space').value) / 1000.0; // m
+  const mainDia = parseFloat(document.getElementById('slab_main_dia').value);
+  const distSpace = parseFloat(document.getElementById('slab_dist_space').value) / 1000.0; // m
+  const distDia = parseFloat(document.getElementById('slab_dist_dia').value);
+
+  if (!L || !W || !mainSpace || !mainDia || !distSpace || !distDia) {
+    alert('Please fill all slab fields');
+    return null;
+  }
+
+  // Main bars run along length direction (bars spaced across width)
+  const nMainBars = Math.ceil(W / mainSpace) + 1; // +1 to include edge
+  const lengthPerMainBar = L; // each runs full length (assume no laps)
+  const totalMainLength = nMainBars * lengthPerMainBar;
+  const mainWeightKg = totalMainLength * weightPerMeter(mainDia);
+
+  // Distribution bars (perp direction) run along width direction (bars spaced across length)
+  const nDistBars = Math.ceil(L / distSpace) + 1;
+  const lengthPerDistBar = W;
+  const totalDistLength = nDistBars * lengthPerDistBar;
+  const distWeightKg = totalDistLength * weightPerMeter(distDia);
+
+  const totalKg = mainWeightKg + distWeightKg;
+
+  return {
+    type: 'Slab',
+    inputs: { L, W, mainSpace, mainDia, distSpace, distDia },
+    nMainBars, totalMainLength: fix(totalMainLength,3), mainWeightKg: fix(mainWeightKg,3),
+    nDistBars, totalDistLength: fix(totalDistLength,3), distWeightKg: fix(distWeightKg,3),
+    totalKg: fix(totalKg,3), totalTon: fix(toTon(totalKg),4)
+  };
+}
+
+/* --- Show results to page --- */
+function showResult(obj){
+  if (!obj) return;
+  lastResult = obj; // store for export
+
+  if (obj.type === 'Beam'){
+    resultArea.innerHTML = `
+      <table>
+        <tr><th>Item</th><th>Value</th></tr>
+        <tr><td>Member</td><td>Beam (L=${obj.inputs.L} m)</td></tr>
+        <tr><td>Main bars total length</td><td>${obj.mainLengthTotal} m</td></tr>
+        <tr><td>Main bars weight</td><td>${obj.mainWeightKg} kg</td></tr>
+        <tr><td>Number of stirrups</td><td>${obj.nStirrups}</td></tr>
+        <tr><td>Stirrup length (each)</td><td>${obj.stirrupLength} m</td></tr>
+        <tr><td>Total stirrup length</td><td>${obj.totalStirrupLength} m</td></tr>
+        <tr><td>Stirrup weight</td><td>${obj.stirrupWeightKg} kg</td></tr>
+        <tr><td><b>Total Steel</b></td><td><b>${obj.totalKg} kg (${obj.totalTon} t)</b></td></tr>
+      </table>
+    `;
+  } else if (obj.type === 'Column'){
+    resultArea.innerHTML = `
+      <table>
+        <tr><th>Item</th><th>Value</th></tr>
+        <tr><td>Member</td><td>Column (H=${obj.inputs.H} m)</td></tr>
+        <tr><td>Vertical bars total length</td><td>${obj.vertLengthTotal} m</td></tr>
+        <tr><td>Vertical bars weight</td><td>${obj.vertWeightKg} kg</td></tr>
+        <tr><td>Number of stirrups</td><td>${obj.nStirrups}</td></tr>
+        <tr><td>Stirrup length (each)</td><td>${obj.stirrupLength} m</td></tr>
+        <tr><td>Total stirrup length</td><td>${obj.totalStirrupLength} m</td></tr>
+        <tr><td>Stirrup weight</td><td>${obj.stirrupWeightKg} kg</td></tr>
+        <tr><td><b>Total Steel</b></td><td><b>${obj.totalKg} kg (${obj.totalTon} t)</b></td></tr>
+      </table>
+    `;
+  } else if (obj.type === 'Slab'){
+    resultArea.innerHTML = `
+      <table>
+        <tr><th>Item</th><th>Value</th></tr>
+        <tr><td>Member</td><td>Slab (${obj.inputs.L} × ${obj.inputs.W} m)</td></tr>
+        <tr><td>Main bars (count)</td><td>${obj.nMainBars}</td></tr>
+        <tr><td>Total main length</td><td>${obj.totalMainLength} m</td></tr>
+        <tr><td>Main bars weight</td><td>${obj.mainWeightKg} kg</td></tr>
+        <tr><td>Distribution bars (count)</td><td>${obj.nDistBars}</td></tr>
+        <tr><td>Total dist length</td><td>${obj.totalDistLength} m</td></tr>
+        <tr><td>Distribution bars weight</td><td>${obj.distWeightKg} kg</td></tr>
+        <tr><td><b>Total Steel</b></td><td><b>${obj.totalKg} kg (${obj.totalTon} t)</b></td></tr>
+      </table>
+    `;
+  }
+}
+
+/* --- Hook up calculate button --- */
+calcBtn.addEventListener('click', ()=>{
+  const t = memberType.value;
+  let res = null;
+  if (t === 'beam') res = calculateBeam();
+  if (t === 'column') res = calculateColumn();
+  if (t === 'slab') res = calculateSlab();
+
+  if (res) showResult(res);
+});
+
+/* --- Export to Excel (XLSX) using SheetJS --- */
+exportExcelBtn.addEventListener('click', ()=>{
+  if (!lastResult){
+    alert('No result to export. Please calculate first.');
+    return;
+  }
+
+  // Build rows
+  const rows = [['Item','Value']];
+  rows.push(['Member Type', lastResult.type]);
+
+  // add inputs
+  for (const k in lastResult.inputs){
+    rows.push([`Input: ${k}`, String(lastResult.inputs[k])]);
+  }
+
+  // add computed values intelligently
+  for (const key of Object.keys(lastResult)){
+    if (['type','inputs'].includes(key)) continue;
+    rows.push([key, String(lastResult[key])]);
+  }
+
+  // convert to worksheet
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'SteelQty');
+
+  // write file
+  XLSX.writeFile(wb, `steel_quantity_${lastResult.type}_${Date.now()}.xlsx`);
+});
+
+/* --- Export to PDF using jsPDF --- */
+exportPDFBtn.addEventListener('click', async ()=>{
+  if (!lastResult){
+    alert('No result to export. Please calculate first.');
+    return;
+  }
+
+  // use jspdf
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+
+  const title = `Steel Quantity - ${lastResult.type}`;
+  doc.setFontSize(14);
+  doc.text(title, 12, 20);
+
+  doc.setFontSize(10);
+  let y = 30;
+
+  doc.text('Inputs:', 12, y); y += 6;
+  for (const k in lastResult.inputs){
+    doc.text(`${k}: ${String(lastResult.inputs[k])}`, 14, y); y += 6;
+    if (y > 270){ doc.addPage(); y = 20; }
+  }
+
+  y += 4;
+  doc.text('Results:', 12, y); y += 6;
+  for (const key of Object.keys(lastResult)){
+    if (['type','inputs'].includes(key)) continue;
+    const text = `${key}: ${String(lastResult[key])}`;
+    doc.text(text, 14, y); y += 6;
+    if (y > 270){ doc.addPage(); y = 20; }
+  }
+
+  doc.save(`steel_quantity_${lastResult.type}_${Date.now()}.pdf`);
+});
+
+</script>
+
+</body>
+</html>
