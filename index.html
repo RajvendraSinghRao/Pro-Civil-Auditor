@@ -71,6 +71,9 @@
   <!-- Material Calculator Button -->
   <button class="btn" onclick="goToMaterialCalculator()">Material Calculator For Concrete</button>
 
+   <!-- Steel Quantity Calculator Button -->
+  <button class="btn" onclick="goToCalculator()">Open Area Calculator</button>
+
   <script>
     function goToCalculator() {
       localStorage.setItem("entryAllowed", "true");
@@ -93,6 +96,21 @@
         window.location.href = "registration.html";
       }
     }
+
+    function goToCalculator() {
+      localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
+
+      if (localStorage.getItem("registeredUser")) {
+        window.location.href = "Steel_Quantity_Calculator.html";
+      } else {
+        window.location.href = "registration.html";
+      }
+    }
+
+
+
+    
   </script>
 </body>
 </html>
