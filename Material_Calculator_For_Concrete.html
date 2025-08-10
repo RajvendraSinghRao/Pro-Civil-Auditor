@@ -3,38 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Concrete Material Calculator</title>
+  <title>Pro Civil Auditor</title>
   <style>
     body {
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f3d66;
+      background-color: #0f3d66; /* Match logo's blue */
       color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
     }
 
     h2 {
       font-size: 2rem;
-      margin-bottom: 20px;
-      text-align: center;
+      margin-top: 20px;
     }
 
-    .input-box, select {
-      padding: 12px;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: none;
-      outline: none;
-      width: 80%;
-      max-width: 300px;
-      margin-bottom: 15px;
-      box-sizing: border-box;
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
     }
 
     .btn {
@@ -46,99 +39,60 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      width: 80%;
-      max-width: 300px;
+      margin: 10px 0;
     }
 
     .btn:hover {
       background-color: #f0f0f0;
     }
 
-    #result {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 15px;
-      margin-top: 15px;
-      border-radius: 8px;
-      width: 80%;
-      max-width: 350px;
-      font-size: 0.95rem;
-    }
-
     @media (max-width: 600px) {
-      h2 { font-size: 1.5rem; }
-      .btn, .input-box, select { font-size: 1.1rem; }
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .btn {
+        width: 80%;
+        padding: 14px;
+        font-size: 1.1rem;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Use your logo -->
+  <img src="assets_task_01k10bwwhfedha45fzcx79afag_1753432932_img_1.webp" alt="Pro Civil Auditor Logo" class="logo" />
 
-  <h2>Concrete Material Calculator</h2>
+  <h2>Pro Civil Auditor</h2>
 
-  <select id="grade" class="input-box">
-    <option value="M5">M5 (1 : 5 : 10)</option>
-    <option value="M7.5">M7.5 (1 : 4 : 8)</option>
-    <option value="M10">M10 (1 : 3 : 6)</option>
-    <option value="M15">M15 (1 : 2 : 4)</option>
-    <option value="M20">M20 (1 : 1.5 : 3)</option>
-    <option value="M25">M25 (1 : 1 : 2)</option>
-    <option value="M30">M30 (1 : 0.75 : 1.5)</option>
-    <option value="M35">M35 (1 : 0.5 : 1)</option>
-    <option value="M40">M40 (1 : 0.25 : 0.5)</option>
-  </select>
+  <!-- Existing button -->
+  <button class="btn" onclick="goToCalculator()">Open Area Calculator</button>
 
-  <input type="number" id="volume" class="input-box" step="0.01" placeholder="Enter volume in m³" />
-
-  <button class="btn" onclick="calculate()">Calculate</button>
-
-  <div id="result"></div>
+  <!-- New button -->
+  <button class="btn" onclick="goToMaterialCalculator()">Material Calculator For Concrete</button>
 
   <script>
+    function goToCalculator() {
+      localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
 
-     if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
-    alert("Access Denied. Please start from the Home Page.");
-    window.location.href = "index.html";
-  }
-</script>
-  
-    function calculate() {
-      let grade = document.getElementById("grade").value;
-      let volume = parseFloat(document.getElementById("volume").value);
-
-      if (!volume || volume <= 0) {
-        alert("Enter a valid volume");
-        return;
+      if (localStorage.getItem("registeredUser")) {
+        window.location.href = "area_calculator.html";
+      } else {
+        window.location.href = "registration.html";
       }
+    }
 
-      let ratio = {cement: 0, sand: 0, agg: 0};
-      if (grade === "M5") ratio = {cement: 1, sand: 5, agg: 10};
-      if (grade === "M7.5") ratio = {cement: 1, sand: 4, agg: 8};
-      if (grade === "M10") ratio = {cement: 1, sand: 3, agg: 6};
-      if (grade === "M15") ratio = {cement: 1, sand: 2, agg: 4};
-      if (grade === "M20") ratio = {cement: 1, sand: 1.5, agg: 3};
-      if (grade === "M25") ratio = {cement: 1, sand: 1, agg: 2};
-      if (grade === "M30") ratio = {cement: 1, sand: 0.75, agg: 1.5};
-      if (grade === "M35") ratio = {cement: 1, sand: 0.5, agg: 1};
-      if (grade === "M40") ratio = {cement: 1, sand: 0.25, agg: 0.5};
+    function goToMaterialCalculator() {
+      localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
 
-      let totalParts = ratio.cement + ratio.sand + ratio.agg;
-
-      let cementVolume = (ratio.cement / totalParts) * volume;
-      let cementWeight = cementVolume * 1440; // kg
-      let cementBags = cementWeight / 50;
-
-      let sandVolume = (ratio.sand / totalParts) * volume;
-      let sandBrass = sandVolume / 2.83;
-
-      let aggVolume = (ratio.agg / totalParts) * volume;
-      let aggBrass = aggVolume / 2.83;
-
-      document.getElementById("result").innerHTML =
-        `<b>Cement:</b> ${cementWeight.toFixed(2)} kg (${cementBags.toFixed(2)} bags of 50 kg)<br>
-         <b>Sand:</b> ${sandVolume.toFixed(3)} m³ (${sandBrass.toFixed(3)} brass)<br>
-         <b>Aggregate:</b> ${aggVolume.toFixed(3)} m³ (${aggBrass.toFixed(3)} brass)<br>
-         <small>Note: 1 brass = 2.83 m³</small>`;
+      if (localStorage.getItem("registeredUser")) {
+        window.location.href = "Material_Calculator_For_Concrete.html";
+      } else {
+        window.location.href = "registration.html";
+      }
     }
   </script>
-
 </body>
 </html>
