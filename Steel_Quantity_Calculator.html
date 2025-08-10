@@ -282,26 +282,26 @@ function calculateBeam(){
 }
 
 function calculateColumn(){
-  const H = parseFloat(document.getElementById('col_height').value);
-  const bw = parseFloat(document.getElementById('col_width').value) / 1000.0; // m
-  const d = parseFloat(document.getElementById('col_depth').value) / 1000.0; // m
+  const L = parseFloat(document.getElementById('col_length').value);   // m
+  const B = parseFloat(document.getElementById('col_breadth').value);  // m
+  const H = parseFloat(document.getElementById('col_height').value);   // m
   const nBars = parseInt(document.getElementById('col_nbars').value);
-  const barDia = parseFloat(document.getElementById('col_dbars').value);
-  const stSpacing = parseFloat(document.getElementById('col_st_spacing').value) / 1000.0; // m
-  const stDia = parseFloat(document.getElementById('col_st_dia').value);
+  const barDia = parseFloat(document.getElementById('col_dbars').value); // mm
+  const stSpacing = parseFloat(document.getElementById('col_st_spacing').value) / 1000.0; // mm → m
+  const stDia = parseFloat(document.getElementById('col_st_dia').value); // mm
 
-  if (!H || !bw || !d || !nBars || !barDia || !stSpacing || !stDia) {
+  if (!L || !B || !H || !nBars || !barDia || !stSpacing || !stDia) {
     alert('Please fill all column fields');
     return null;
   }
 
-  // Vertical bars length = height (assume no lap/extra)
+  // Vertical bars: assume straight length = height
   const vertLengthTotal = nBars * H;
   const vertWeightKg = vertLengthTotal * weightPerMeter(barDia);
 
-  // Stirrups: count = H / spacing
+  // Stirrups
   const nStirrups = Math.ceil(H / stSpacing);
-  const stirrupLength = 2 * (bw + d) + 0.30; // hook allowance
+  const stirrupLength = 2 * (L + B) + 0.3; // 0.3 m hook allowance
   const totalStirrupLength = nStirrups * stirrupLength;
   const stirrupWeightKg = totalStirrupLength * weightPerMeter(stDia);
 
@@ -309,7 +309,7 @@ function calculateColumn(){
 
   return {
     type: 'Column',
-    inputs: { H, bw, d, nBars, barDia, stSpacing, stDia },
+    inputs: { L, B, H, nBars, barDia, stSpacing, stDia },
     vertLengthTotal: fix(vertLengthTotal,3),
     vertWeightKg: fix(vertWeightKg,3),
     nStirrups,
@@ -320,6 +320,7 @@ function calculateColumn(){
     totalTon: fix(toTon(totalKg),4)
   };
 }
+
 
 function calculateSlab(){
   const L = parseFloat(document.getElementById('slab_length').value);
