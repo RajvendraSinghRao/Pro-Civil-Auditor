@@ -74,6 +74,10 @@
    <!-- Steel Quantity Calculator Button -->
   <button class="btn" onclick="goToSteelCalculator()">Steel Quantity Calculator</button>
 
+  <!-- Compass Button -->
+  <button class="btn" onclick="goToCompass()">Compassr</button>
+
+
   <script>
     function goToCalculator() {
       localStorage.setItem("entryAllowed", "true");
@@ -103,6 +107,17 @@
 
       if (localStorage.getItem("registeredUser")) {
         window.location.href = "Steel_Quantity_Calculator.html";
+      } else {
+        window.location.href = "registration.html";
+      }
+    }
+
+     function goToCompass() {
+      localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
+
+      if (localStorage.getItem("registeredUser")) {
+        window.location.href = "Compass.html";
       } else {
         window.location.href = "registration.html";
       }
