@@ -5,105 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mobile Spirit Level</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 0;
-        padding: 0;
-        background: #f2f2f2;
-    }
-    h1 {
-        background: #2196F3;
-        color: white;
-        padding: 10px;
-        margin: 0;
-    }
-    #bubble-container {
-        position: relative;
-        margin: 30px auto;
-        width: 300px;
-        height: 50px;
-        background: #ddd;
-        border-radius: 25px;
-        overflow: hidden;
-    }
-    #bubble {
-        position: absolute;
-        top: 0;
-        left: 140px;
-        width: 20px;
-        height: 50px;
-        background: yellow;
-        border-radius: 50%;
-        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        transition: left 0.05s linear;
-    }
-    button {
-        padding: 10px 20px;
-        margin: 5px;
-        font-size: 16px;
-        border: none;
-        background: #2196F3;
-        color: white;
-        border-radius: 5px;
-    }
+  body {
+    background: #222;
+    color: #fff;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 10px;
+  }
+  .level-container {
+    position: relative;
+    width: 300px;
+    height: 50px;
+    background: #4CAF50;
+    border-radius: 25px;
+    margin: 20px auto;
+    overflow: hidden;
+    border: 3px solid #ccc;
+  }
+  .bubble {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    background: yellow;
+    border-radius: 50%;
+    border: 2px solid #333;
+    transform: translateX(-50%);
+  }
+  .controls button {
+    padding: 10px 15px;
+    margin: 5px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .start-btn { background: orange; }
+  .mode-btn { background: teal; color: #fff; }
+  .degree {
+    font-size: 20px;
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
 
-<h1>Mobile Spirit Level</h1>
-<div id="bubble-container">
-    <div id="bubble"></div>
-</div>
-<p>Angle: <span id="angle">0</span>°</p>
+<h1>📏 Mobile Spirit Level</h1>
 
-<button onclick="requestSensor()">Start Level</button>
-<button onclick="toggleMode()">Switch to Vertical</button>
+<div class="level-container">
+  <div class="bubble" id="bubble"></div>
+</div>
+
+<div class="degree" id="degree">0°</div>
+
+<div class="controls">
+  <button class="start-btn" id="startBtn">Start Level</button>
+  <button class="mode-btn" id="modeBtn">Switch to Vertical</button>
+</div>
 
 <script>
-let verticalMode = false;
+let mode = "horizontal"; // horizontal or vertical
+let maxMove = 130; // pixels from center
+let bubble = document.getElementById("bubble");
+let degreeText = document.getElementById("degree");
 
-function toggleMode() {
-    verticalMode = !verticalMode;
-    alert(verticalMode ? "Vertical mode ON" : "Horizontal mode ON");
-}
+document.getElementById("modeBtn").addEventListener("click", () => {
+  mode = (mode === "horizontal") ? "vertical" : "horizontal";
+  document.getElementById("modeBtn").innerText = 
+    (mode === "horizontal") ? "Switch to Vertical" : "Switch to Horizontal";
+});
 
-function requestSensor() {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // iOS needs permission
-        DeviceOrientationEvent.requestPermission().then(response => {
-            if (response === 'granted') {
-                window.addEventListener('deviceorientation', updateBubble);
-            } else {
-                alert("Permission denied.");
-            }
-        }).catch(console.error);
-    } else {
-        // Android
-        window.addEventListener('deviceorientation', updateBubble);
+document.getElementById("startBtn").addEventListener("click", async () => {
+  if (typeof DeviceMotionEvent.requestPermission === "function") {
+    try {
+      await DeviceMotionEvent.requestPermission();
+      await DeviceOrientationEvent.requestPermission();
+    } catch (e) {
+      alert("Permission denied for motion sensors.");
+      return;
     }
-}
+  }
+  window.addEventListener("deviceorientation", handleOrientation);
+});
 
-function updateBubble(event) {
-    let angle;
-    if (verticalMode) {
-        angle = event.beta; // up/down tilt for vertical
-        if (angle > 90) angle = 90;
-        if (angle < -90) angle = -90;
-    } else {
-        angle = event.gamma; // left/right tilt for horizontal
-        if (angle > 90) angle = 90;
-        if (angle < -90) angle = -90;
-    }
-    document.getElementById("angle").textContent = angle.toFixed(1);
+function handleOrientation(event) {
+  let angle = (mode === "horizontal") ? event.gamma : event.beta;
+  if (angle === null) return;
 
-    let bubble = document.getElementById("bubble");
-    let containerWidth = 300;
-    let bubbleWidth = 20;
-    let maxMove = containerWidth - bubbleWidth;
+  // Limit angle to -45 to +45 for better sensitivity
+  if (angle < -45) angle = -45;
+  if (angle > 45) angle = 45;
 
-    let leftPos = (containerWidth - bubbleWidth) / 2 + (angle / 90) * (maxMove / 2);
-    bubble.style.left = leftPos + "px";
+  // Move bubble
+  let moveX = (angle / 45) * maxMove;
+  bubble.style.left = `calc(50% + ${moveX}px)`;
+
+  // Show degree
+  degreeText.innerText = angle.toFixed(1) + "°";
 }
 </script>
 
