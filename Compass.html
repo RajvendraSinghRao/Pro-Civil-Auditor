@@ -240,8 +240,13 @@ function handleOrientation(e){
   degEl.textContent = adjusted.toFixed(1) + '°';
   dirEl.textContent = toCardinal(adjusted);
   setRaw(`mag=${magHeading.toFixed(1)}° → true=${trueHeading.toFixed(2)}°`);
-  needle.style.transform = `rotate(${trueHeading}deg)`;
-  needleTail.style.transform = `rotate(${trueHeading + 180}deg)`;
+  // Rotate the whole dial so that the North mark points toward actual north
+document.getElementById("dial").style.transform = `rotate(${-trueHeading}deg)`;
+
+// Keep the needle fixed pointing up
+needle.style.transform = `rotate(0deg)`;
+needleTail.style.transform = `rotate(180deg)`;
+
   setStatus('Live (true north)');
 
   // vibrate when near true north if enabled
