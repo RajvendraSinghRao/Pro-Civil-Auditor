@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Spirit Level</title>
+<title>Digital Spirit Level</title>
 <style>
   body {
     background: #222;
@@ -37,16 +37,9 @@
     transition: left 0.05s linear;
   }
   .degree { font-size: 20px; margin-top: 10px; }
-  .controls {
-    display: flex;
-    overflow-x: auto;
-    margin-top: 15px;
-    padding-bottom: 5px;
-  }
   .controls button {
-    flex: 0 0 auto;
     padding: 10px 15px;
-    margin: 0 5px;
+    margin: 5px;
     font-size: 16px;
     border: none;
     border-radius: 8px;
@@ -59,19 +52,20 @@
 </head>
 <body>
 
-<h1>📏 Mobile Spirit Level</h1>
+<h1>📏 Digital Spirit Level</h1>
 
-<div class="level-container">
-  <div class="bubble" id="bubble"></div>
+<div id="modeSelect">
+  <p>Select Level Mode:</p>
+  <button onclick="setMode('horizontal')">Horizontal</button>
+  <button onclick="setMode('vertical')">Vertical</button>
 </div>
 
-<div class="degree" id="degree">0°</div>
-
-<button class="start-btn" id="startBtn">Start Level</button>
-
-<div class="controls" id="modeSelector">
-  <button data-mode="horizontal">Horizontal</button>
-  <button data-mode="vertical">Vertical</button>
+<div id="levelUI" style="display:none;">
+  <div class="level-container">
+    <div class="bubble" id="bubble"></div>
+  </div>
+  <div class="degree" id="degree">0°</div>
+  <button class="start-btn" id="startBtn">Calibrate & Start</button>
 </div>
 
 <script>
@@ -79,37 +73,62 @@ let mode = "horizontal";
 let maxMove = 130;
 let bubble = document.getElementById("bubble");
 let degreeText = document.getElementById("degree");
+let baseline = 0;
+let lastVibrateTime = 0; // To avoid continuous vibration
+const vibrateCooldown = 1000; // ms
 
-// Mode selection scrollable
-document.querySelectorAll("#modeSelector button").forEach(btn => {
-  btn.addEventListener("click", () => {
-    mode = btn.getAttribute("data-mode");
+// Stop auto screen rotation
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock("portrait").catch(() => {
+    console.log("Orientation lock not supported on this browser.");
   });
-});
+}
 
-// Start button click
+function setMode(selectedMode) {
+  mode = selectedMode;
+  document.getElementById("modeSelect").style.display = "none";
+  document.getElementById("levelUI").style.display = "block";
+}
+
 document.getElementById("startBtn").addEventListener("click", async () => {
   try {
     if (typeof DeviceMotionEvent.requestPermission === "function") {
       await DeviceMotionEvent.requestPermission();
       await DeviceOrientationEvent.requestPermission();
     }
-    window.addEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("deviceorientation", calibrateOnce, { once: true });
   } catch (err) {
     alert("Please allow motion sensor access in your browser settings.");
   }
 });
 
+function calibrateOnce(event) {
+  baseline = (mode === "horizontal") ? event.gamma : event.beta;
+  window.addEventListener("deviceorientation", handleOrientation);
+}
+
 function handleOrientation(event) {
   let angle = (mode === "horizontal") ? event.gamma : event.beta;
   if (angle === null) return;
 
-  if (angle < -45) angle = -45;
-  if (angle > 45) angle = 45;
+  let relativeAngle = angle - baseline;
+  if (relativeAngle < -45) relativeAngle = -45;
+  if (relativeAngle > 45) relativeAngle = 45;
 
-  let moveX = (angle / 45) * maxMove;
+  let moveX = (relativeAngle / 45) * maxMove;
   bubble.style.left = `calc(50% + ${moveX}px)`;
-  degreeText.innerText = angle.toFixed(1) + "°";
+  degreeText.innerText = relativeAngle.toFixed(1) + "°";
+
+  // Vibrate if nearly level
+  if (Math.abs(relativeAngle) <= 0.5) {
+    let now = Date.now();
+    if (now - lastVibrateTime > vibrateCooldown) {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(200); // vibrate for 200ms
+      }
+      lastVibrateTime = now;
+    }
+  }
 }
 </script>
 
