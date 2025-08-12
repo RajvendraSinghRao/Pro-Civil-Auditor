@@ -25,7 +25,8 @@
     cursor: pointer;
   }
   h2 {
-    margin: 10px 0;
+    margin: 10px 0 5px;
+    color: #0fb1a8;
   }
   /* Tube Level */
   #tubeLevel {
@@ -49,6 +50,23 @@
     top: 0;
     left: calc(50% - 20px);
     transition: left 0.05s;
+  }
+  /* Center lines inside tube */
+  #tubeLevel::before,
+  #tubeLevel::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #0fb1a8;
+    opacity: 0.8;
+  }
+  #tubeLevel::before {
+    left: calc(50% - 20px); /* left line - exactly bubble width away from center */
+  }
+  #tubeLevel::after {
+    left: calc(50% + 20px); /* right line */
   }
   /* Circular Level */
   #circleLevel {
@@ -91,10 +109,9 @@
 </select>
 
 <div id="tubeLevel">
-  <h2>Horizontal Tube Level</h2>
   <div id="tubeBubble"></div>
-  <div class="tilt-display" id="tubeTilt">Tilt (γ): 0°</div>
 </div>
+<div class="tilt-display" id="tubeTilt" style="max-width:400px; margin: 0 auto;">Tilt (γ): 0°</div>
 
 <div id="circleLevel">
   <h2>Circle & Dot Level</h2>
@@ -126,12 +143,15 @@ let lastBeepTime = 0;
 levelSelector.addEventListener("change", () => {
   if(levelSelector.value === "tube") {
     tubeLevel.style.display = "block";
+    tubeTilt.style.display = "block";
     circleLevel.style.display = "none";
   } else if(levelSelector.value === "circle") {
     tubeLevel.style.display = "none";
+    tubeTilt.style.display = "none";
     circleLevel.style.display = "block";
   } else {
     tubeLevel.style.display = "none";
+    tubeTilt.style.display = "none";
     circleLevel.style.display = "none";
   }
 });
@@ -185,8 +205,9 @@ window.addEventListener("deviceorientation", (event) => {
   }
 });
 
-// Initially hide levels
+// Initially hide levels and tilt displays
 tubeLevel.style.display = "none";
+tubeTilt.style.display = "none";
 circleLevel.style.display = "none";
 </script>
 
