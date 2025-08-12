@@ -121,64 +121,64 @@
 </div>
 
 <script>
-// Beep function for both tools
-function beep() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gainNode = ctx.createGain();
-  osc.connect(gainNode);
-  gainNode.connect(ctx.destination);
-  osc.type = 'sine';
-  osc.frequency.value = 1000;
-  gainNode.gain.value = 0.1;
-  osc.start();
-  osc.stop(ctx.currentTime + 0.1);
-}
+  // Beep function for both tools
+  function beep() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 1000;
+    gainNode.gain.value = 0.1;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  }
 
-let lastBeepTime = 0;
+  let lastBeepTime = 0;
 
-if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', function(event) {
-    let beta = event.beta || 0;   // front/back tilt [-180,180]
-    let gamma = event.gamma || 0; // left/right tilt [-90,90]
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', function(event) {
+      let beta = event.beta || 0;   // front/back tilt [-180,180]
+      let gamma = event.gamma || 0; // left/right tilt [-90,90]
 
-    // Clamp tilt values to [-45,45]
-    let x = Math.min(Math.max(gamma, -45), 45);
-    let y = Math.min(Math.max(beta, -45), 45);
+      // Clamp tilt values to [-45,45]
+      let x = Math.min(Math.max(gamma, -45), 45);
+      let y = Math.min(Math.max(beta, -45), 45);
 
-    // --- Circular Bubble Spirit Level ---
-    let bubble = document.getElementById('bubble');
-    bubble.style.left = 90 + (x * 2) + "px";
-    bubble.style.top = 90 + (y * 2) + "px";
+      // --- Circular Bubble Spirit Level ---
+      let bubble = document.getElementById('bubble');
+      bubble.style.left = 90 + (x * 2) + "px";
+      bubble.style.top = 90 + (y * 2) + "px";
 
-    let tilt = Math.sqrt(x * x + y * y).toFixed(1);
-    document.getElementById('bubbleTilt').textContent = `Tilt: ${tilt}°`;
+      let tilt = Math.sqrt(x * x + y * y).toFixed(1);
+      document.getElementById('bubbleTilt').textContent = `Tilt: ${tilt}°`;
 
-    if (tilt <= 1) {
-      bubble.style.background = "radial-gradient(circle at 30% 30%, #aaffaa, #00ff00)";
-    } else {
-      bubble.style.background = "radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b)";
-    }
+      if (tilt <= 1) {
+        bubble.style.background = "radial-gradient(circle at 30% 30%, #aaffaa, #00ff00)";
+      } else {
+        bubble.style.background = "radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b)";
+      }
 
-    // --- Simple Dot Level ---
-    let simpleDot = document.getElementById('simpleDot');
-    simpleDot.style.left = 90 + (x * 2) + "px";
-    simpleDot.style.top = 90 + (y * 2) + "px";
+      // --- Simple Dot Level ---
+      let simpleDot = document.getElementById('simpleDot');
+      simpleDot.style.left = 90 + (x * 2) + "px";
+      simpleDot.style.top = 90 + (y * 2) + "px";
 
-    document.getElementById('simpleTilt').textContent = `Tilt: ${tilt}°`;
+      document.getElementById('simpleTilt').textContent = `Tilt: ${tilt}°`;
 
-    simpleDot.style.background = (tilt <= 1) ? "lime" : "red";
+      simpleDot.style.background = (tilt <= 1) ? "lime" : "red";
 
-    // Beep once per second if level
-    let now = Date.now();
-    if (tilt <= 1 && now - lastBeepTime > 1000) {
-      beep();
-      lastBeepTime = now;
-    }
-  });
-} else {
-  alert("Your device does not support orientation sensors.");
-}
+      // Beep once per second if level
+      let now = Date.now();
+      if (tilt <= 1 && now - lastBeepTime > 1000) {
+        beep();
+        lastBeepTime = now;
+      }
+    });
+  } else {
+    alert("Your device does not support orientation sensors.");
+  }
 </script>
 
 </body>
