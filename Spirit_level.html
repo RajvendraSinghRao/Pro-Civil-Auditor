@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leveling Tool</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dual Spirit Level Tool</title>
 <style>
   body {
     background: #031526;
@@ -15,45 +15,128 @@
   h1 {
     color: #0fb1a8;
   }
-  #bubble {
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 20px;
+  }
+  .level-box {
+    background: #07293a;
+    border: 4px solid #0fb1a8;
+    border-radius: 20px;
+    padding: 15px;
+    width: 260px;
+    user-select: none;
+  }
+  .level-box h2 {
+    margin-top: 0;
+    font-size: 22px;
+    color: #0fb1a8;
+  }
+  /* Simple Dot Level */
+  #simpleLevel {
+    position: relative;
     width: 200px;
     height: 200px;
-    border: 4px solid #0fb1a8;
+    margin: 10px auto;
     border-radius: 50%;
-    margin: 30px auto;
-    position: relative;
     background: #07293a;
+    border: 4px solid #0fb1a8;
   }
-  #dot {
+  #simpleDot {
+    position: absolute;
     width: 20px;
     height: 20px;
     background: red;
     border-radius: 50%;
-    position: absolute;
     top: 90px;
     left: 90px;
     transition: 0.05s linear;
   }
-  #angle {
-    font-size: 20px;
-    margin-top: 20px;
+  /* Circular Bubble Spirit Level */
+  #bubbleLevel {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 10px auto;
+    border-radius: 50%;
+    border: 6px solid #0fb1a8;
+    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.2), rgba(0, 0, 0, 0.6));
+    overflow: hidden;
+  }
+  #bubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    box-shadow: 0 0 8px rgba(255, 255, 0, 0.7);
+    position: absolute;
+    top: 90px;
+    left: 90px;
+    transition: 0.05s linear;
+    background: radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b);
+  }
+  /* Tilt display */
+  .tilt-angle {
+    font-size: 18px;
+    margin-top: 15px;
+    color: #9fb3c8;
+  }
+  p.instructions {
+    color: #9fb3c8;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  @media(max-width:600px) {
+    .container {
+      flex-direction: column;
+      gap: 30px;
+    }
+    .level-box {
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+    }
   }
 </style>
 </head>
 <body>
 
-<h1>📏 Digital Level Tool</h1>
-<div id="bubble">
-  <div id="dot"></div>
+<h1>📏 Dual Spirit Level Tools</h1>
+<div class="container">
+
+  <!-- Simple Dot Level -->
+  <div class="level-box" id="simpleBox">
+    <h2>Simple Dot Level</h2>
+    <div id="simpleLevel">
+      <div id="simpleDot"></div>
+    </div>
+    <div class="tilt-angle" id="simpleTilt">Tilt: 0°</div>
+    <p class="instructions">
+      Moves a dot in a circle to show tilt.<br>
+      Beeps and turns green when level.
+    </p>
+  </div>
+
+  <!-- Circular Bubble Level -->
+  <div class="level-box" id="bubbleBox">
+    <h2>Spirit Bubble Level</h2>
+    <div id="bubbleLevel">
+      <div id="bubble"></div>
+    </div>
+    <div class="tilt-angle" id="bubbleTilt">Tilt: 0°</div>
+    <p class="instructions">
+      Realistic bubble floats inside the tube.<br>
+      Beeps and turns green when level.
+    </p>
+  </div>
+
 </div>
-<div id="angle">Tilt: 0°</div>
-<p style="font-size:14px;color:#9fb3c8;">
-  Hold your phone flat or against a surface to measure level.  
-  It will beep and turn green when perfectly level.
-</p>
 
 <script>
-// Create beep sound
+// Beep function for both tools
 function beep() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator();
@@ -61,10 +144,10 @@ function beep() {
   osc.connect(gainNode);
   gainNode.connect(ctx.destination);
   osc.type = 'sine';
-  osc.frequency.value = 1000; // Hz
-  gainNode.gain.value = 0.1; // volume
+  osc.frequency.value = 1000;
+  gainNode.gain.value = 0.1;
   osc.start();
-  osc.stop(ctx.currentTime + 0.1); // 0.1 sec beep
+  osc.stop(ctx.currentTime + 0.1);
 }
 
 let lastBeepTime = 0;
@@ -74,28 +157,40 @@ if (window.DeviceOrientationEvent) {
     let beta = event.beta || 0;   // front/back tilt [-180,180]
     let gamma = event.gamma || 0; // left/right tilt [-90,90]
 
-    // Move the dot inside the bubble
-    let dot = document.getElementById('dot');
-    let x = Math.min(Math.max(gamma, -45), 45); 
-    let y = Math.min(Math.max(beta, -45), 45);  
+    // Clamp tilt values to reasonable range
+    let x = Math.min(Math.max(gamma, -45), 45);
+    let y = Math.min(Math.max(beta, -45), 45);
 
-    dot.style.left = 90 + (x * 2) + "px";
-    dot.style.top = 90 + (y * 2) + "px";
+    // --- Simple Dot Level ---
+    let simpleDot = document.getElementById('simpleDot');
+    simpleDot.style.left = 90 + (x * 2) + "px";
+    simpleDot.style.top = 90 + (y * 2) + "px";
 
-    // Show tilt angle
-    let tilt = Math.sqrt(x * x + y * y).toFixed(1);
-    document.getElementById('angle').innerHTML = `Tilt: ${tilt}°`;
+    let simpleTilt = Math.sqrt(x * x + y * y).toFixed(1);
+    let simpleTiltEl = document.getElementById('simpleTilt');
+    simpleTiltEl.textContent = `Tilt: ${simpleTilt}°`;
 
-    // Visual cue: Green if level, Red if not
-    if (tilt <= 1) {
-      dot.style.background = "lime";
+    // Color dot green if level, red otherwise
+    simpleDot.style.background = (simpleTilt <= 1) ? "lime" : "red";
+
+    // --- Circular Bubble Spirit Level ---
+    let bubble = document.getElementById('bubble');
+    bubble.style.left = 90 + (x * 2) + "px";
+    bubble.style.top = 90 + (y * 2) + "px";
+
+    let bubbleTilt = simpleTilt; // same tilt value
+    let bubbleTiltEl = document.getElementById('bubbleTilt');
+    bubbleTiltEl.textContent = `Tilt: ${bubbleTilt}°`;
+
+    if (bubbleTilt <= 1) {
+      bubble.style.background = "radial-gradient(circle at 30% 30%, #aaffaa, #00ff00)";
     } else {
-      dot.style.background = "red";
+      bubble.style.background = "radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b)";
     }
 
-    // Beep when within ±1° of level
+    // Beep when level (once per second)
     let now = Date.now();
-    if (tilt <= 1 && now - lastBeepTime > 1000) {
+    if (simpleTilt <= 1 && now - lastBeepTime > 1000) {
       beep();
       lastBeepTime = now;
     }
