@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leveling Tool</title>
+<style>
+  body {
+    background: #031526;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+  h1 {
+    color: #0fb1a8;
+  }
+  #bubble {
+    width: 200px;
+    height: 200px;
+    border: 4px solid #0fb1a8;
+    border-radius: 50%;
+    margin: 30px auto;
+    position: relative;
+    background: #07293a;
+  }
+  #dot {
+    width: 20px;
+    height: 20px;
+    background: red;
+    border-radius: 50%;
+    position: absolute;
+    top: 90px;
+    left: 90px;
+    transition: 0.05s linear;
+  }
+  #angle {
+    font-size: 20px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>📏 Digital Level Tool</h1>
+<div id="bubble">
+  <div id="dot"></div>
+</div>
+<div id="angle">Tilt: 0°</div>
+<p style="font-size:14px;color:#9fb3c8;">
+  Hold your phone flat or against a surface to measure level.  
+  It will beep and turn green when perfectly level.
+</p>
+
+<script>
+// Create beep sound
+function beep() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  osc.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.value = 1000; // Hz
+  gainNode.gain.value = 0.1; // volume
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1); // 0.1 sec beep
+}
+
+let lastBeepTime = 0;
+
+if (window.DeviceOrientationEvent) {
+  window.addEventListener('deviceorientation', function(event) {
+    let beta = event.beta || 0;   // front/back tilt [-180,180]
+    let gamma = event.gamma || 0; // left/right tilt [-90,90]
+
+    // Move the dot inside the bubble
+    let dot = document.getElementById('dot');
+    let x = Math.min(Math.max(gamma, -45), 45); 
+    let y = Math.min(Math.max(beta, -45), 45);  
+
+    dot.style.left = 90 + (x * 2) + "px";
+    dot.style.top = 90 + (y * 2) + "px";
+
+    // Show tilt angle
+    let tilt = Math.sqrt(x * x + y * y).toFixed(1);
+    document.getElementById('angle').innerHTML = `Tilt: ${tilt}°`;
+
+    // Visual cue: Green if level, Red if not
+    if (tilt <= 1) {
+      dot.style.background = "lime";
+    } else {
+      dot.style.background = "red";
+    }
+
+    // Beep when within ±1° of level
+    let now = Date.now();
+    if (tilt <= 1 && now - lastBeepTime > 1000) {
+      beep();
+      lastBeepTime = now;
+    }
+  });
+} else {
+  alert("Your device does not support orientation sensors.");
+}
+</script>
+
+</body>
+</html>
