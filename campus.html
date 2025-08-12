@@ -1,136 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digital Spirit Level</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mobile Compass</title>
 <style>
-  body {
-    background: #222;
-    color: #fff;
-    text-align: center;
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
+  :root{
+    --bg:#071028; --card:#0b1a2b; --accent:#10b981; --muted:#9fb3c8;
   }
-  h1 { margin-bottom: 10px; }
-  .level-container {
-    position: relative;
-    width: 300px;
-    height: 50px;
-    background: #4CAF50;
-    border-radius: 25px;
-    margin: 20px auto;
-    overflow: hidden;
-    border: 3px solid #ccc;
+  html,body{height:100%; margin:0; font-family:Inter,Segoe UI,system-ui,Arial; background:linear-gradient(180deg,#021122 0%, #04253b 100%); color:#e6f7fb;}
+  .wrap{min-height:100%; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;}
+  .card{width:100%; max-width:520px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px; padding:18px; box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+  h1{margin:0 0 8px; font-size:20px;}
+  p.lead{margin:0 0 12px; color:var(--muted); font-size:13px;}
+  .controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .btn{background:#08324a;border:1px solid rgba(255,255,255,0.03); color:#dff6ff; padding:10px 12px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer;}
+  .btn.primary{background:linear-gradient(90deg,#06b6d4,#3b82f6); color:#021024; border:none;}
+  .compass-wrap{display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .dial{
+    width:260px; height:260px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02), transparent 18%), linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    display:flex; align-items:center; justify-content:center; position:relative; box-shadow: inset 0 8px 20px rgba(2,6,23,0.6);
+    border: 2px solid rgba(255,255,255,0.04);
   }
-  .bubble {
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    width: 40px;
-    height: 40px;
-    background: yellow;
-    border-radius: 50%;
-    border: 2px solid #333;
-    transform: translateX(-50%);
-    transition: left 0.05s linear;
+  .north-mark{position:absolute; top:8px; left:50%; transform:translateX(-50%); font-weight:700; color:#ffefef;}
+  .needle{
+    position:absolute; width:6px; height:110px; background:linear-gradient(#ff4d4d,#b30000); border-radius:6px 6px 0 0;
+    transform-origin: 50% 85%;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
   }
-  .degree { font-size: 20px; margin-top: 10px; }
-  .controls button {
-    padding: 10px 15px;
-    margin: 5px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: teal;
-    color: #fff;
+  .needle-tail{position:absolute; width:6px; height:46px; background:linear-gradient(#0fb1a8,#036); top:50%; transform-origin:50% 15%; border-radius:6px 6px 0 0;}
+  .center-dot{width:18px;height:18px;border-radius:50%;background:#fff; position:absolute; box-shadow:0 0 10px rgba(0,0,0,0.5);}
+  .readouts{min-width:140px; color:var(--muted); display:flex; flex-direction:column; gap:10px; font-size:14px;}
+  .deg{font-size:28px; color:#e6f7f9; font-weight:700;}
+  .dir{font-size:18px; font-weight:700; color:#dff6ff;}
+  .hint{font-size:12px; color:var(--muted);}
+  .footer{margin-top:12px; display:flex; align-items:center; gap:8px; justify-content:space-between;}
+  .small{font-size:12px;color:var(--muted);}
+  @media(max-width:560px){
+    .dial{width:200px;height:200px;}
   }
-  .start-btn { background: orange; }
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="card" role="application" aria-label="Mobile compass">
+    <h1>🧭 Mobile Compass</h1>
+    <p class="lead">Tap <strong>Enable</strong> to allow sensors, then hold your phone flat and slowly rotate. The needle points to magnetic north (device-dependent).</p>
 
-<h1>📏 Digital Spirit Level</h1>
+    <div class="controls">
+      <button id="enableBtn" class="btn primary">Enable</button>
+      <button id="vibToggle" class="btn">Vibrate Near North: Off</button>
+    </div>
 
-<div id="modeSelect">
-  <p>Select Level Mode:</p>
-  <button onclick="setMode('horizontal')">Horizontal</button>
-  <button onclick="setMode('vertical')">Vertical</button>
-</div>
+    <div class="compass-wrap">
+      <div class="dial" id="dial" aria-hidden="true">
+        <div class="north-mark">N</div>
+        <div class="needle" id="needle" style="transform: rotate(0deg);"></div>
+        <div class="needle-tail" id="needleTail" style="transform: rotate(180deg);"></div>
+        <div class="center-dot"></div>
+      </div>
 
-<div id="levelUI" style="display:none;">
-  <div class="level-container">
-    <div class="bubble" id="bubble"></div>
+      <div class="readouts" aria-live="polite">
+        <div class="deg" id="deg">—°</div>
+        <div class="dir" id="dir">—</div>
+        <div class="hint small" id="status">Status: Not enabled</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="small">Tip: Keep phone flat and move slowly for best results.</div>
+      <div class="small">If compass is inaccurate, rotate phone in figure-8 to calibrate.</div>
+    </div>
   </div>
-  <div class="degree" id="degree">0°</div>
-  <button class="start-btn" id="startBtn">Calibrate & Start</button>
 </div>
 
 <script>
-let mode = "horizontal";
-let maxMove = 130;
-let bubble = document.getElementById("bubble");
-let degreeText = document.getElementById("degree");
-let baseline = 0;
-let lastVibrateTime = 0; // To avoid continuous vibration
-const vibrateCooldown = 1000; // ms
+(() => {
+  const enableBtn = document.getElementById('enableBtn');
+  const vibBtn = document.getElementById('vibToggle');
+  const needle = document.getElementById('needle');
+  const needleTail = document.getElementById('needleTail');
+  const degEl = document.getElementById('deg');
+  const dirEl = document.getElementById('dir');
+  const statusEl = document.getElementById('status');
 
-// Stop auto screen rotation
-if (screen.orientation && screen.orientation.lock) {
-  screen.orientation.lock("portrait").catch(() => {
-    console.log("Orientation lock not supported on this browser.");
-  });
-}
+  let vibrateOn = false;
+  let lastVibe = 0;
+  const vibeCooldown = 1500; // ms
+  const northTolerance = 6; // degrees within which to vibrate
 
-function setMode(selectedMode) {
-  mode = selectedMode;
-  document.getElementById("modeSelect").style.display = "none";
-  document.getElementById("levelUI").style.display = "block";
-}
-
-document.getElementById("startBtn").addEventListener("click", async () => {
-  try {
-    if (typeof DeviceMotionEvent.requestPermission === "function") {
-      await DeviceMotionEvent.requestPermission();
-      await DeviceOrientationEvent.requestPermission();
-    }
-    window.addEventListener("deviceorientation", calibrateOnce, { once: true });
-  } catch (err) {
-    alert("Please allow motion sensor access in your browser settings.");
+  // map degrees to cardinal
+  function getCardinal(d){
+    if (d === null) return '—';
+    const sectors = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    const idx = Math.round(((d % 360) / 22.5)) % 16;
+    return sectors[idx];
   }
-});
 
-function calibrateOnce(event) {
-  baseline = (mode === "horizontal") ? event.gamma : event.beta;
-  window.addEventListener("deviceorientation", handleOrientation);
-}
+  function setStatus(text){ statusEl.textContent = 'Status: ' + text; }
 
-function handleOrientation(event) {
-  let angle = (mode === "horizontal") ? event.gamma : event.beta;
-  if (angle === null) return;
+  function handleOrientation(e){
+    // Several browsers give heading in different properties:
+    // iOS Safari: webkitCompassHeading (0 = north)
+    // Older: e.alpha (0 = device facing north relative to some reference)
+    // We'll try the reliable ones in order.
+    let heading = null;
 
-  let relativeAngle = angle - baseline;
-  if (relativeAngle < -45) relativeAngle = -45;
-  if (relativeAngle > 45) relativeAngle = 45;
+    if (typeof e.webkitCompassHeading === 'number') {
+      // iOS
+      heading = e.webkitCompassHeading;
+    } else if (typeof e.absolute === 'boolean' && e.absolute === true && typeof e.alpha === 'number') {
+      // absolute orientation (alpha = rotation around z axis)
+      heading = 360 - e.alpha; // convert to compass-like degrees
+    } else if (typeof e.alpha === 'number') {
+      // fallback (may be relative)
+      heading = 360 - e.alpha;
+    }
 
-  let moveX = (relativeAngle / 45) * maxMove;
-  bubble.style.left = `calc(50% + ${moveX}px)`;
-  degreeText.innerText = relativeAngle.toFixed(1) + "°";
+    if (heading === null || isNaN(heading)) {
+      setStatus('No heading data (unsupported device/browser)');
+      return;
+    }
 
-  // Vibrate if nearly level
-  if (Math.abs(relativeAngle) <= 0.5) {
-    let now = Date.now();
-    if (now - lastVibrateTime > vibrateCooldown) {
-      if ("vibrate" in navigator) {
-        navigator.vibrate(200); // vibrate for 200ms
+    // normalize
+    heading = (heading + 360) % 360;
+
+    // rotate needle: needle should point to north, so rotate to heading degrees
+    needle.style.transform = `rotate(${heading}deg)`;
+    needleTail.style.transform = `rotate(${heading + 180}deg)`;
+
+    degEl.textContent = heading.toFixed(0) + '°';
+    dirEl.textContent = getCardinal(heading);
+    setStatus('Live');
+
+    // vibrate if near north (within tolerance)
+    const diffToNorth = Math.min(Math.abs(heading - 0), Math.abs(360 - heading));
+    if (vibrateOn && diffToNorth <= northTolerance) {
+      const now = Date.now();
+      if (now - lastVibe > vibeCooldown && navigator.vibrate) {
+        navigator.vibrate(220);
+        lastVibe = now;
       }
-      lastVibrateTime = now;
     }
   }
-}
-</script>
 
+  async function enableCompass(){
+    try {
+      // iOS requires requestPermission
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const resp = await DeviceOrientationEvent.requestPermission();
+        if (resp !== 'granted') {
+          setStatus('Permission denied');
+          return;
+        }
+      }
+      window.addEventListener('deviceorientation', handleOrientation, true);
+      setStatus('Enabled — move slowly');
+      enableBtn.textContent = 'Enabled';
+      enableBtn.disabled = true;
+    } catch (err) {
+      console.error(err);
+      setStatus('Permission error or not supported');
+    }
+  }
+
+  enableBtn.addEventListener('click', enableCompass);
+
+  vibBtn.addEventListener('click', () => {
+    vibrateOn = !vibrateOn;
+    vibBtn.textContent = 'Vibrate Near North: ' + (vibrateOn ? 'On' : 'Off');
+    if (vibrateOn && navigator.vibrate) navigator.vibrate(80);
+  });
+
+  // If device doesn't support orientation events, inform user
+  if (!('DeviceOrientationEvent' in window)) {
+    setStatus('DeviceOrientation not supported in this browser');
+    enableBtn.disabled = true;
+  }
+
+})();
+</script>
 </body>
 </html>
