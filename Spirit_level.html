@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dual Spirit Level Tool</title>
+<title>Stacked Spirit Level Tool</title>
 <style>
   body {
     background: #031526;
@@ -11,39 +11,61 @@
     font-family: Arial, sans-serif;
     text-align: center;
     padding: 20px;
+    margin: 0;
   }
   h1 {
     color: #0fb1a8;
-  }
-  .container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 40px;
-    margin-top: 20px;
+    margin-bottom: 20px;
   }
   .level-box {
     background: #07293a;
     border: 4px solid #0fb1a8;
     border-radius: 20px;
-    padding: 15px;
-    width: 260px;
+    padding: 20px;
+    width: 280px;
+    margin: 20px auto;
     user-select: none;
   }
   .level-box h2 {
     margin-top: 0;
+    margin-bottom: 15px;
     font-size: 22px;
     color: #0fb1a8;
   }
+
+  /* Circular Bubble Spirit Level */
+  #bubbleLevel {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 6px solid #0fb1a8;
+    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.15), rgba(0, 0, 0, 0.7));
+    margin: 0 auto 20px;
+    overflow: hidden;
+  }
+  #bubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    box-shadow: 0 0 12px rgba(255, 255, 0, 0.8);
+    position: absolute;
+    top: 90px;
+    left: 90px;
+    transition: left 0.05s linear, top 0.05s linear, background 0.3s;
+    background: radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b);
+  }
+
   /* Simple Dot Level */
   #simpleLevel {
     position: relative;
     width: 200px;
     height: 200px;
-    margin: 10px auto;
     border-radius: 50%;
     background: #07293a;
     border: 4px solid #0fb1a8;
+    margin: 0 auto;
   }
   #simpleDot {
     position: absolute;
@@ -53,31 +75,9 @@
     border-radius: 50%;
     top: 90px;
     left: 90px;
-    transition: 0.05s linear;
+    transition: left 0.05s linear, top 0.05s linear, background 0.3s;
   }
-  /* Circular Bubble Spirit Level */
-  #bubbleLevel {
-    position: relative;
-    width: 220px;
-    height: 220px;
-    margin: 10px auto;
-    border-radius: 50%;
-    border: 6px solid #0fb1a8;
-    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.2), rgba(0, 0, 0, 0.6));
-    overflow: hidden;
-  }
-  #bubble {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid #ccc;
-    box-shadow: 0 0 8px rgba(255, 255, 0, 0.7);
-    position: absolute;
-    top: 90px;
-    left: 90px;
-    transition: 0.05s linear;
-    background: radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b);
-  }
+
   /* Tilt display */
   .tilt-angle {
     font-size: 18px;
@@ -88,51 +88,36 @@
     color: #9fb3c8;
     font-size: 14px;
     margin-top: 10px;
-  }
-  @media(max-width:600px) {
-    .container {
-      flex-direction: column;
-      gap: 30px;
-    }
-    .level-box {
-      width: 100%;
-      max-width: 320px;
-      margin: 0 auto;
-    }
+    margin-bottom: 0;
   }
 </style>
 </head>
 <body>
 
-<h1>📏 Dual Spirit Level Tools</h1>
-<div class="container">
+<h1>📏 Stacked Spirit Level Tools</h1>
 
-  <!-- Simple Dot Level -->
-  <div class="level-box" id="simpleBox">
-    <h2>Simple Dot Level</h2>
-    <div id="simpleLevel">
-      <div id="simpleDot"></div>
-    </div>
-    <div class="tilt-angle" id="simpleTilt">Tilt: 0°</div>
-    <p class="instructions">
-      Moves a dot in a circle to show tilt.<br>
-      Beeps and turns green when level.
-    </p>
+<div class="level-box" id="bubbleBox">
+  <h2>Spirit Bubble Level</h2>
+  <div id="bubbleLevel">
+    <div id="bubble"></div>
   </div>
+  <div class="tilt-angle" id="bubbleTilt">Tilt: 0°</div>
+  <p class="instructions">
+    Realistic yellow bubble floats inside a liquid tube.<br>
+    Turns green and beeps when perfectly level.
+  </p>
+</div>
 
-  <!-- Circular Bubble Level -->
-  <div class="level-box" id="bubbleBox">
-    <h2>Spirit Bubble Level</h2>
-    <div id="bubbleLevel">
-      <div id="bubble"></div>
-    </div>
-    <div class="tilt-angle" id="bubbleTilt">Tilt: 0°</div>
-    <p class="instructions">
-      Realistic bubble floats inside the tube.<br>
-      Beeps and turns green when level.
-    </p>
+<div class="level-box" id="simpleBox">
+  <h2>Simple Dot Level</h2>
+  <div id="simpleLevel">
+    <div id="simpleDot"></div>
   </div>
-
+  <div class="tilt-angle" id="simpleTilt">Tilt: 0°</div>
+  <p class="instructions">
+    A simple red dot moves inside a circle.<br>
+    Turns green and beeps when perfectly level.
+  </p>
 </div>
 
 <script>
@@ -157,40 +142,36 @@ if (window.DeviceOrientationEvent) {
     let beta = event.beta || 0;   // front/back tilt [-180,180]
     let gamma = event.gamma || 0; // left/right tilt [-90,90]
 
-    // Clamp tilt values to reasonable range
+    // Clamp tilt values to [-45,45]
     let x = Math.min(Math.max(gamma, -45), 45);
     let y = Math.min(Math.max(beta, -45), 45);
-
-    // --- Simple Dot Level ---
-    let simpleDot = document.getElementById('simpleDot');
-    simpleDot.style.left = 90 + (x * 2) + "px";
-    simpleDot.style.top = 90 + (y * 2) + "px";
-
-    let simpleTilt = Math.sqrt(x * x + y * y).toFixed(1);
-    let simpleTiltEl = document.getElementById('simpleTilt');
-    simpleTiltEl.textContent = `Tilt: ${simpleTilt}°`;
-
-    // Color dot green if level, red otherwise
-    simpleDot.style.background = (simpleTilt <= 1) ? "lime" : "red";
 
     // --- Circular Bubble Spirit Level ---
     let bubble = document.getElementById('bubble');
     bubble.style.left = 90 + (x * 2) + "px";
     bubble.style.top = 90 + (y * 2) + "px";
 
-    let bubbleTilt = simpleTilt; // same tilt value
-    let bubbleTiltEl = document.getElementById('bubbleTilt');
-    bubbleTiltEl.textContent = `Tilt: ${bubbleTilt}°`;
+    let tilt = Math.sqrt(x * x + y * y).toFixed(1);
+    document.getElementById('bubbleTilt').textContent = `Tilt: ${tilt}°`;
 
-    if (bubbleTilt <= 1) {
+    if (tilt <= 1) {
       bubble.style.background = "radial-gradient(circle at 30% 30%, #aaffaa, #00ff00)";
     } else {
       bubble.style.background = "radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b)";
     }
 
-    // Beep when level (once per second)
+    // --- Simple Dot Level ---
+    let simpleDot = document.getElementById('simpleDot');
+    simpleDot.style.left = 90 + (x * 2) + "px";
+    simpleDot.style.top = 90 + (y * 2) + "px";
+
+    document.getElementById('simpleTilt').textContent = `Tilt: ${tilt}°`;
+
+    simpleDot.style.background = (tilt <= 1) ? "lime" : "red";
+
+    // Beep once per second if level
     let now = Date.now();
-    if (simpleTilt <= 1 && now - lastBeepTime > 1000) {
+    if (tilt <= 1 && now - lastBeepTime > 1000) {
       beep();
       lastBeepTime = now;
     }
