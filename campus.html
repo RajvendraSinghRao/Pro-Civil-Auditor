@@ -13,9 +13,7 @@
     margin: 0;
     padding: 20px;
   }
-  h1 {
-    margin-bottom: 10px;
-  }
+  h1 { margin-bottom: 10px; }
   .level-container {
     position: relative;
     width: 300px;
@@ -36,21 +34,27 @@
     border-radius: 50%;
     border: 2px solid #333;
     transform: translateX(-50%);
+    transition: left 0.05s linear;
+  }
+  .degree { font-size: 20px; margin-top: 10px; }
+  .controls {
+    display: flex;
+    overflow-x: auto;
+    margin-top: 15px;
+    padding-bottom: 5px;
   }
   .controls button {
+    flex: 0 0 auto;
     padding: 10px 15px;
-    margin: 5px;
+    margin: 0 5px;
     font-size: 16px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    background: teal;
+    color: #fff;
   }
   .start-btn { background: orange; }
-  .mode-btn { background: teal; color: #fff; }
-  .degree {
-    font-size: 20px;
-    margin-top: 10px;
-  }
 </style>
 </head>
 <body>
@@ -63,49 +67,48 @@
 
 <div class="degree" id="degree">0°</div>
 
-<div class="controls">
-  <button class="start-btn" id="startBtn">Start Level</button>
-  <button class="mode-btn" id="modeBtn">Switch to Vertical</button>
+<button class="start-btn" id="startBtn">Start Level</button>
+
+<div class="controls" id="modeSelector">
+  <button data-mode="horizontal">Horizontal</button>
+  <button data-mode="vertical">Vertical</button>
 </div>
 
 <script>
-let mode = "horizontal"; // horizontal or vertical
-let maxMove = 130; // pixels from center
+let mode = "horizontal";
+let maxMove = 130;
 let bubble = document.getElementById("bubble");
 let degreeText = document.getElementById("degree");
 
-document.getElementById("modeBtn").addEventListener("click", () => {
-  mode = (mode === "horizontal") ? "vertical" : "horizontal";
-  document.getElementById("modeBtn").innerText = 
-    (mode === "horizontal") ? "Switch to Vertical" : "Switch to Horizontal";
+// Mode selection scrollable
+document.querySelectorAll("#modeSelector button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    mode = btn.getAttribute("data-mode");
+  });
 });
 
+// Start button click
 document.getElementById("startBtn").addEventListener("click", async () => {
-  if (typeof DeviceMotionEvent.requestPermission === "function") {
-    try {
+  try {
+    if (typeof DeviceMotionEvent.requestPermission === "function") {
       await DeviceMotionEvent.requestPermission();
       await DeviceOrientationEvent.requestPermission();
-    } catch (e) {
-      alert("Permission denied for motion sensors.");
-      return;
     }
+    window.addEventListener("deviceorientation", handleOrientation);
+  } catch (err) {
+    alert("Please allow motion sensor access in your browser settings.");
   }
-  window.addEventListener("deviceorientation", handleOrientation);
 });
 
 function handleOrientation(event) {
   let angle = (mode === "horizontal") ? event.gamma : event.beta;
   if (angle === null) return;
 
-  // Limit angle to -45 to +45 for better sensitivity
   if (angle < -45) angle = -45;
   if (angle > 45) angle = 45;
 
-  // Move bubble
   let moveX = (angle / 45) * maxMove;
   bubble.style.left = `calc(50% + ${moveX}px)`;
-
-  // Show degree
   degreeText.innerText = angle.toFixed(1) + "°";
 }
 </script>
