@@ -214,45 +214,36 @@ async function startCompassFlow(){
 // 3) orientation handler: get magnetic heading, add declination => true north
 function handleOrientation(e) {
   let magHeading = null;
-  let rawInfo = '';
 
   if (typeof e.webkitCompassHeading === 'number') {
+    // iOS devices
     magHeading = e.webkitCompassHeading;
-    rawInfo = `webkitCompassHeading=${e.webkitCompassHeading.toFixed(2)}`;
   } else if (typeof e.alpha === 'number') {
+    // Android devices
     magHeading = clamp360(360 - e.alpha);
-    rawInfo = `alpha=${e.alpha.toFixed(2)} abs=${e.absolute}`;
   } else {
     setStatus('No heading available on this device/browser');
     return;
   }
 
-  // compute true heading
   const trueHeading = clamp360(magHeading + declination);
 
-  // UI updates
+  // Show heading in UI
   degEl.textContent = trueHeading.toFixed(1) + '°';
   dirEl.textContent = toCardinal(trueHeading);
   setRaw(`mag=${magHeading.toFixed(1)}° → true=${trueHeading.toFixed(2)}°`);
 
-  // Rotate needle so it points to true north in real life
-  needle.style.transform = `rotate(${trueHeading}deg)`;
-  needleTail.style.transform = `rotate(${trueHeading + 180}deg)`;
-
-  setStatus('Live (true north)');
-
-  // vibrate when near true north if enabled
-  if (vibeCheckbox.checked && 'vibrate' in navigator) {
-    const diffToNorth = Math.min(Math.abs(trueHeading - 0), Math.abs(360 - trueHeading));
-    if (diffToNorth <= nearNorthTol) {
-      const now = Date.now();
-      if (now - lastVibe > vibeCooldown) {
-        navigator.vibrate(180);
-        lastVibe = now;
-      }
-    }
+  // Check if phone top is pointing to real north
+  const diffToNorth = Math.min(Math.abs(trueHeading - 0), Math.abs(360 - trueHeading));
+  if (diffToNorth <= nearNorthTol) {
+    setStatus('Phone is pointing to TRUE NORTH ✅');
+    needle.style.background = "green"; // needle turns green
+  } else {
+    setStatus('Not pointing to north');
+    needle.style.background = "linear-gradient(#ff4d4d,#b30000)"; // normal color
   }
 }
+
 
 
 // calibration: set current trueHeading as baseline 0
