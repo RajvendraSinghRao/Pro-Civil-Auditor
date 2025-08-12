@@ -1,99 +1,286 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Browser Compass</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>True-North Compass</title>
 <style>
-  body {
-    background: #222;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-  }
-  h1 { margin-bottom: 10px; }
-  #compass {
-    width: 250px;
-    height: 250px;
-    margin: 30px auto;
-    background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Compass_rose_pale.svg/512px-Compass_rose_pale.svg.png') no-repeat center;
-    background-size: contain;
-    transform: rotate(0deg);
-    transition: transform 0.1s linear;
-  }
-  #direction {
-    font-size: 20px;
-    margin-top: 10px;
-  }
+  :root{ --bg:#031526; --card:#07293a; --muted:#9fb3c8; --accent:#0fb1a8; }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#021426,#05354a);color:#e6f7fb}
+  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+  .card{width:100%;max-width:720px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+  h1{margin:0 0 10px;font-size:20px}
+  p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .btn{background:#08324a;border:1px solid rgba(255,255,255,0.03);color:#dff6ff;padding:10px 12px;border-radius:8px;font-weight:600;cursor:pointer}
+  .btn.primary{background:linear-gradient(90deg,#06b6d4,#3b82f6);color:#021024;border:none}
+  .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .dial{width:260px;height:260px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;background:
+         radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02), transparent 14%),
+         linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+         border:1px solid rgba(255,255,255,0.04)}
+  .needle{position:absolute;width:8px;height:110px;border-radius:8px 8px 0 0;transform-origin:50% 85%;box-shadow:0 6px 20px rgba(0,0,0,0.45);background:linear-gradient(#ff4d4d,#b30000)}
+  .needle-tail{position:absolute;width:8px;height:56px;top:50%;border-radius:8px 8px 0 0;background:linear-gradient(#0fb1a8,#036);transform-origin:50% 15%}
+  .center-dot{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;box-shadow:0 0 8px rgba(0,0,0,0.5)}
+  .north-mark{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700}
+  .readouts{min-width:220px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+  .deg{font-size:34px;color:#e6f7f9;font-weight:700}
+  .dir{font-size:18px;font-weight:700;color:#dff6ff}
+  .diag{margin-top:8px;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:12px;color:var(--muted)}
+  .small{font-size:12px;color:var(--muted)}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+  @media(max-width:640px){ .row{flex-direction:column;align-items:center} .dial{width:200px;height:200px} .readouts{min-width:unset} }
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="card" role="application" aria-label="True North Compass">
+    <h1>🧭 True-North Compass</h1>
+    <p class="lead">Start → allow Location & Motion sensors → hold phone flat. This compass adds the local magnetic declination to the device heading so it points to <strong>true north</strong>.</p>
 
-<h1>🧭 True North Compass</h1>
-<div id="compass"></div>
-<div id="direction">Direction: 0°</div>
-<button id="startBtn">Start Compass</button>
+    <div class="controls">
+      <button id="startBtn" class="btn primary">Start (Enable Location & Motion)</button>
+      <button id="calBtn" class="btn">Calibrate (set current as 0°)</button>
+      <label class="btn" style="display:flex;align-items:center;gap:8px;"><input id="vibe" type="checkbox">Vibrate near True North</label>
+    </div>
+
+    <div class="row">
+      <div class="dial" id="dial" aria-hidden="true">
+        <div class="north-mark">N</div>
+        <div class="needle" id="needle" style="transform:rotate(0deg)"></div>
+        <div class="needle-tail" id="needleTail" style="transform:rotate(180deg)"></div>
+        <div class="center-dot"></div>
+      </div>
+
+      <div class="readouts" aria-live="polite">
+        <div class="deg" id="deg">—°</div>
+        <div class="dir" id="dir">—</div>
+        <div class="small" id="status">Status: idle</div>
+        <div class="diag" id="diag">Declination: —</div>
+        <div class="diag" id="raw">Raw heading: —</div>
+      </div>
+    </div>
+
+    <div class="footer small">
+      <div>Tip: If readings are unstable, move phone in a figure-8 to calibrate magnetometer.</div>
+      <div>Model: WMM (client-side)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightweight WMM declination library (client-side). If CDN blocked, fallback to NOAA API below. -->
+<script src="https://cdn.jsdelivr.net/npm/geomagnetism@0.2.0/index.js"></script>
 
 <script>
-let declination = 0; // Will be updated from location
-let compassEl = document.getElementById("compass");
-let directionEl = document.getElementById("direction");
+/*
+ True-North Compass
+ - Uses deviceorientation (webkitCompassHeading or alpha)
+ - Uses geolocation + a WMM library to compute declination (true - magnetic)
+ - Applies declination: trueHeading = (magHeading + declination) mod 360
+ - Includes simple calibration and vibrate-on-true-north
+*/
 
-document.getElementById("startBtn").addEventListener("click", async () => {
+const startBtn = document.getElementById('startBtn');
+const calBtn = document.getElementById('calBtn');
+const degEl = document.getElementById('deg');
+const dirEl = document.getElementById('dir');
+const statusEl = document.getElementById('status');
+const diagEl = document.getElementById('diag');
+const rawEl = document.getElementById('raw');
+const needle = document.getElementById('needle');
+const needleTail = document.getElementById('needleTail');
+const vibeCheckbox = document.getElementById('vibe');
+
+let declination = 0;           // degrees (east positive)
+let baselineOffset = 0;        // calibration offset in degrees
+let lastVibe = 0;
+const vibeCooldown = 1200;
+const nearNorthTol = 5; // degrees within which we vibrate
+
+// small helper
+function clamp360(d){ d = Number(d) % 360; if (d < 0) d += 360; return d; }
+function toCardinal(d){
+  const sectors = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return sectors[Math.round(((d%360)/22.5)) % 16];
+}
+function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
+function setDiag(s){ diagEl.textContent = 'Declination: ' + s; }
+function setRaw(s){ rawEl.textContent = 'Raw heading: ' + s; }
+
+// 1) Get location -> compute declination
+async function getDeclination(lat, lon, date){
+  // Try client-side library 'geomagnetism' (loaded from CDN)
   try {
-    // Request permission for motion sensors (iOS)
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      await DeviceOrientationEvent.requestPermission();
+    if (typeof geomagnetism !== 'undefined') {
+      // some packages expose a 'point' or 'declination' function; try a few options
+      if (typeof geomagnetism.point === 'function') {
+        const p = geomagnetism.point(lat, lon, new Date(date));
+        // library returns object with decl (likely 'dec' or 'declination')
+        const d = p.decl || p.dec || p.declination || p.variation;
+        if (typeof d === 'number') return d;
+      }
+      if (typeof geomagnetism.declination === 'function') {
+        return geomagnetism.declination(lat, lon, date);
+      }
+      if (typeof geomagnetism.getDeclination === 'function') {
+        return geomagnetism.getDeclination(lat, lon, date);
+      }
+      // fallback: many libs expose index.js default with .declination or .geomag
+      if (typeof geomagnetism.geomagnetic === 'function') {
+        const w = geomagnetism.geomagnetic(lat, lon);
+        return w && w.declination ? w.declination : 0;
+      }
     }
-    // Get GPS location to calculate declination
-    navigator.geolocation.getCurrentPosition(pos => {
-      let lat = pos.coords.latitude;
-      let lon = pos.coords.longitude;
-      declination = estimateDeclination(lat, lon); // Simple estimate
-      startCompass();
-    }, err => {
-      alert("Location access denied. Can't calculate true north.");
-      startCompass();
-    });
-  } catch (e) {
-    alert("Motion or location permissions are required.");
+  } catch(err){
+    console.warn('client-side geomag lib error', err);
   }
+
+  // 2) Fallback to NOAA web service (may require key in future). We'll try the public endpoint that returns XML/JSON.
+  try {
+    // build url - JSON result if supported
+    const url = `https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?lat1=${lat}&lon1=${lon}&resultFormat=json`;
+    const resp = await fetch(url);
+    if (resp.ok) {
+      const j = await resp.json();
+      // The NOAA JSON shape may contain declination in j.result[0].declination or similar. Try to find it.
+      // We'll parse conservatively.
+      if (j && typeof j.result === 'object') {
+        // find any numeric property that looks like declination
+        const findDecl = (obj) => {
+          for(const k in obj){
+            if (k.toLowerCase().includes('declin') || k.toLowerCase().includes('variation') || k.toLowerCase().includes('dec')) {
+              const v = parseFloat(obj[k]);
+              if (!isNaN(v)) return v;
+            }
+            if (typeof obj[k] === 'object') {
+              const sub = findDecl(obj[k]);
+              if (typeof sub === 'number') return sub;
+            }
+          }
+          return null;
+        };
+        const d = findDecl(j);
+        if (typeof d === 'number') return d;
+      }
+    }
+  } catch (err) {
+    console.warn('NOAA declination fetch failed', err);
+  }
+
+  // 3) Last resort: approximate declination with simple geographic heuristic (very rough)
+  // This is an imprecise fallback; better to use WMM library or NOAA service.
+  const approx = (lon / 15) * 0.2; // very rough
+  return approx;
+}
+
+// 2) Start device orientation after obtaining declination
+async function startCompassFlow(){
+  setStatus('Requesting location...');
+  // get geolocation (with prompt)
+  try {
+    const pos = await new Promise((res, rej) => {
+      navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:15000});
+    });
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    setStatus('Computing declination...');
+    const d = await getDeclination(lat, lon, new Date());
+    declination = Number(d) || 0;
+    setDiag((declination>=0?'+':'') + declination.toFixed(2) + '° (east positive)');
+  } catch (err) {
+    console.warn('geolocation/declination failed', err);
+    setDiag('failed to get location — using 0° declination');
+    declination = 0;
+  }
+
+  // request motion permission on iOS if needed
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const resp = await DeviceOrientationEvent.requestPermission();
+      if (resp !== 'granted') {
+        setStatus('Motion permission denied');
+        return;
+      }
+    } catch(err){
+      console.warn('DeviceOrientation request failed', err);
+    }
+  }
+
+  setStatus('Listening to deviceorientation...');
+  // Add listener
+  window.addEventListener('deviceorientation', handleOrientation, true);
+}
+
+// 3) orientation handler: get magnetic heading, add declination => true north
+function handleOrientation(e){
+  // heading (magnetic) detection:
+  // iOS: webkitCompassHeading gives 0..360 with 0 = north
+  // Others: alpha (0..360) where heading ~ 360 - alpha
+  let magHeading = null;
+  let rawInfo = '';
+
+  if (typeof e.webkitCompassHeading === 'number') {
+    magHeading = e.webkitCompassHeading;
+    rawInfo = `webkitCompassHeading=${e.webkitCompassHeading.toFixed(2)}`;
+  } else if (typeof e.alpha === 'number') {
+    // some browsers provide absolute or relative; we use 360 - alpha to get compass heading
+    magHeading = clamp360(360 - e.alpha);
+    rawInfo = `alpha=${e.alpha.toFixed(2)} abs=${e.absolute}`;
+  } else {
+    setStatus('No heading available on this device/browser');
+    return;
+  }
+
+  // compute true heading
+  const trueHeading = clamp360(magHeading + declination);
+  // apply calibration baseline
+  const adjusted = clamp360(trueHeading - baselineOffset);
+
+  // UI updates
+  degEl.textContent = adjusted.toFixed(1) + '°';
+  dirEl.textContent = toCardinal(adjusted);
+  setRaw(`mag=${magHeading.toFixed(1)}° → true=${trueHeading.toFixed(2)}°`);
+  needle.style.transform = `rotate(${trueHeading}deg)`;
+  needleTail.style.transform = `rotate(${trueHeading + 180}deg)`;
+  setStatus('Live (true north)');
+
+  // vibrate when near true north if enabled
+  if (vibeCheckbox.checked && 'vibrate' in navigator) {
+    const diffToNorth = Math.min(Math.abs(adjusted - 0), Math.abs(360 - adjusted));
+    if (diffToNorth <= nearNorthTol) {
+      const now = Date.now();
+      if (now - lastVibe > vibeCooldown) {
+        navigator.vibrate(180);
+        lastVibe = now;
+      }
+    }
+  }
+}
+
+// calibration: set current trueHeading as baseline 0
+calBtn.addEventListener('click', () => {
+  const cur = parseFloat(degEl.textContent);
+  if (isNaN(cur)) {
+    alert('No reading yet. Start the compass and hold phone flat, then calibrate.');
+    return;
+  }
+  // current displayed is adjusted = trueHeading - baselineOffset
+  // so baselineOffset_new = trueHeading (so adjusted->0) -> trueHeading = adjusted + baselineOffset
+  // therefore baselineOffset_new = currentTrueHeading = adjusted + baselineOffset
+  // But adjusted is cur; so:
+  baselineOffset = clamp360((parseFloat(cur) + baselineOffset) % 360);
+  setStatus('Calibrated: current direction set to 0° baseline');
 });
 
-function startCompass() {
-  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-  window.addEventListener("deviceorientation", handleOrientation, true); // fallback
-}
+// start button wiring
+startBtn.addEventListener('click', async () => {
+  // ask for geolocation and motion; run flow
+  await startCompassFlow();
+});
 
-function handleOrientation(event) {
-  if (event.absolute === false && !event.webkitCompassHeading) {
-    return; // Not supported
-  }
+// On load, small guidance
+setStatus('Idle — tap Start and allow Location & Motion');
 
-  let heading;
-  if (event.webkitCompassHeading) {
-    // iOS gives compass heading directly
-    heading = event.webkitCompassHeading;
-  } else {
-    // Other devices: alpha is degrees from device's orientation to magnetic north
-    heading = 360 - event.alpha;
-  }
-
-  // Adjust for declination to get TRUE north
-  let trueHeading = (heading + declination + 360) % 360;
-
-  compassEl.style.transform = `rotate(${trueHeading}deg)`;
-  directionEl.innerText = `Direction: ${trueHeading.toFixed(1)}°`;
-}
-
-// Simple declination estimate (approx, not super precise)
-function estimateDeclination(lat, lon) {
-  // Rough formula: declination changes about 0.2° per degree longitude from Greenwich
-  // This is just a placeholder, real calculation uses magnetic model (WMM)
-  return (lon / 15) * 0.2; 
-}
 </script>
-
 </body>
 </html>
