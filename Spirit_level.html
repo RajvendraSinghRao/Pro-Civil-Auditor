@@ -1,185 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Stacked Spirit Level Tool</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dual Spirit Level</title>
 <style>
   body {
     background: #031526;
     color: white;
     font-family: Arial, sans-serif;
     text-align: center;
-    padding: 20px;
     margin: 0;
-  }
-  h1 {
-    color: #0fb1a8;
-    margin-bottom: 20px;
-  }
-  .level-box {
-    background: #07293a;
-    border: 4px solid #0fb1a8;
-    border-radius: 20px;
     padding: 20px;
-    width: 280px;
-    margin: 20px auto;
-    user-select: none;
   }
-  .level-box h2 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 22px;
-    color: #0fb1a8;
-  }
+  h2 { margin: 10px 0; }
 
-  /* Circular Bubble Spirit Level */
-  #bubbleLevel {
+  /* Tube Level */
+  #tubeLevel {
+    width: 90%;
+    height: 40px;
+    background: #07293a;
+    border-radius: 20px;
+    margin: 20px auto;
     position: relative;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    border: 6px solid #0fb1a8;
-    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.15), rgba(0, 0, 0, 0.7));
-    margin: 0 auto 20px;
     overflow: hidden;
+    border: 2px solid #0fb1a8;
   }
-  #bubble {
+  #tubeBubble {
     width: 40px;
     height: 40px;
+    background: rgba(255,255,0,0.7);
     border-radius: 50%;
-    border: 2px solid #ccc;
-    box-shadow: 0 0 12px rgba(255, 255, 0, 0.8);
     position: absolute;
-    top: 90px;
-    left: 90px;
-    transition: left 0.05s linear, top 0.05s linear, background 0.3s;
-    background: radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b);
+    top: 0;
+    left: calc(50% - 20px);
+    transition: left 0.05s;
   }
 
-  /* Simple Dot Level */
-  #simpleLevel {
-    position: relative;
+  /* Circular Level */
+  #circleLevel {
     width: 200px;
     height: 200px;
-    border-radius: 50%;
     background: #07293a;
-    border: 4px solid #0fb1a8;
-    margin: 0 auto;
+    border-radius: 50%;
+    margin: 20px auto;
+    position: relative;
+    border: 2px solid #0fb1a8;
   }
-  #simpleDot {
-    position: absolute;
+  #dot {
     width: 20px;
     height: 20px;
-    background: red;
+    background: yellow;
     border-radius: 50%;
-    top: 90px;
-    left: 90px;
-    transition: left 0.05s linear, top 0.05s linear, background 0.3s;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: top 0.05s, left 0.05s;
   }
 
-  /* Tilt display */
-  .tilt-angle {
-    font-size: 18px;
-    margin-top: 15px;
-    color: #9fb3c8;
-  }
-  p.instructions {
-    color: #9fb3c8;
-    font-size: 14px;
-    margin-top: 10px;
-    margin-bottom: 0;
-  }
+  .level-ok { background: #0fb1a8 !important; }
 </style>
 </head>
 <body>
 
-<h1>📏 Stacked Spirit Level Tools</h1>
-
-<div class="level-box" id="bubbleBox">
-  <h2>Spirit Bubble Level</h2>
-  <div id="bubbleLevel">
-    <div id="bubble"></div>
-  </div>
-  <div class="tilt-angle" id="bubbleTilt">Tilt: 0°</div>
-  <p class="instructions">
-    Realistic yellow bubble floats inside a liquid tube.<br>
-    Turns green and beeps when perfectly level.
-  </p>
+<h2>Horizontal Tube Level</h2>
+<div id="tubeLevel">
+  <div id="tubeBubble"></div>
 </div>
 
-<div class="level-box" id="simpleBox">
-  <h2>Simple Dot Level</h2>
-  <div id="simpleLevel">
-    <div id="simpleDot"></div>
-  </div>
-  <div class="tilt-angle" id="simpleTilt">Tilt: 0°</div>
-  <p class="instructions">
-    A simple red dot moves inside a circle.<br>
-    Turns green and beeps when perfectly level.
-  </p>
+<h2>Circle & Dot Level</h2>
+<div id="circleLevel">
+  <div id="dot"></div>
 </div>
+
+<audio id="beep" src="https://www.soundjay.com/buttons/beep-07.wav" preload="auto"></audio>
 
 <script>
-  // Beep function for both tools
-  function beep() {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.value = 1000;
-    gainNode.gain.value = 0.1;
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
-  }
+let beep = document.getElementById("beep");
 
-  let lastBeepTime = 0;
+if (window.DeviceOrientationEvent) {
+  window.addEventListener("deviceorientation", function(event) {
+    let gamma = event.gamma || 0; // left/right tilt
+    let beta = event.beta || 0;   // front/back tilt
 
-  if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', function(event) {
-      let beta = event.beta || 0;   // front/back tilt [-180,180]
-      let gamma = event.gamma || 0; // left/right tilt [-90,90]
+    // Tube Level movement (left-right)
+    let tube = document.getElementById("tubeLevel");
+    let bubble = document.getElementById("tubeBubble");
+    let tubeWidth = tube.clientWidth - bubble.clientWidth;
+    let posX = tubeWidth / 2 + (gamma / 45) * (tubeWidth / 2);
+    posX = Math.max(0, Math.min(tubeWidth, posX));
+    bubble.style.left = posX + "px";
 
-      // Clamp tilt values to [-45,45]
-      let x = Math.min(Math.max(gamma, -45), 45);
-      let y = Math.min(Math.max(beta, -45), 45);
+    // Circle Level movement (2D)
+    let circle = document.getElementById("circleLevel");
+    let dot = document.getElementById("dot");
+    let radius = (circle.clientWidth - dot.clientWidth) / 2;
+    let x = radius + (gamma / 45) * radius;
+    let y = radius + (beta / 45) * radius;
+    x = Math.max(0, Math.min(2 * radius, x));
+    y = Math.max(0, Math.min(2 * radius, y));
+    dot.style.left = x + "px";
+    dot.style.top = y + "px";
 
-      // --- Circular Bubble Spirit Level ---
-      let bubble = document.getElementById('bubble');
-      bubble.style.left = 90 + (x * 2) + "px";
-      bubble.style.top = 90 + (y * 2) + "px";
+    // Level detection & beep
+    let tubeLevelOK = Math.abs(gamma) < 2;
+    let circleLevelOK = Math.abs(gamma) < 2 && Math.abs(beta) < 2;
 
-      let tilt = Math.sqrt(x * x + y * y).toFixed(1);
-      document.getElementById('bubbleTilt').textContent = `Tilt: ${tilt}°`;
+    if (tubeLevelOK) {
+      bubble.classList.add("level-ok");
+    } else {
+      bubble.classList.remove("level-ok");
+    }
 
-      if (tilt <= 1) {
-        bubble.style.background = "radial-gradient(circle at 30% 30%, #aaffaa, #00ff00)";
-      } else {
-        bubble.style.background = "radial-gradient(circle at 30% 30%, #ffff99, #ffeb3b)";
-      }
+    if (circleLevelOK) {
+      dot.classList.add("level-ok");
+    } else {
+      dot.classList.remove("level-ok");
+    }
 
-      // --- Simple Dot Level ---
-      let simpleDot = document.getElementById('simpleDot');
-      simpleDot.style.left = 90 + (x * 2) + "px";
-      simpleDot.style.top = 90 + (y * 2) + "px";
-
-      document.getElementById('simpleTilt').textContent = `Tilt: ${tilt}°`;
-
-      simpleDot.style.background = (tilt <= 1) ? "lime" : "red";
-
-      // Beep once per second if level
-      let now = Date.now();
-      if (tilt <= 1 && now - lastBeepTime > 1000) {
-        beep();
-        lastBeepTime = now;
-      }
-    });
-  } else {
-    alert("Your device does not support orientation sensors.");
-  }
+    if (tubeLevelOK || circleLevelOK) {
+      if (beep.paused) { beep.play(); }
+    }
+  });
+} else {
+  alert("Your device does not support Device Orientation.");
+}
 </script>
-
 </body>
 </html>
