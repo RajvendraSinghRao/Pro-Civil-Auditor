@@ -5,13 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>True-North Compass</title>
 <style>
-
-  // Access restriction
-    if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
-      alert("Access Denied. Please start from the Home Page.");
-      window.location.href = "index.html";
-    }
-  
   :root{ --bg:#031526; --card:#07293a; --muted:#9fb3c8; --accent:#0fb1a8; }
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#021426,#05354a);color:#e6f7fb}
   .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
@@ -73,7 +66,13 @@
     </div>
   </div>
 </div>
-
+  <script>
+  // Access restriction
+    if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
+      alert("Access Denied. Please start from the Home Page.");
+      window.location.href = "index.html";
+    }
+  <script>
 <script src="https://cdn.jsdelivr.net/npm/geomagnetism@0.2.0/index.js"></script>
 <script>
 const startBtn = document.getElementById('startBtn');
