@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spirit Level</title>
+<title>Spirit Level with Slope Calculator</title>
 <style>
   body {
     background: #031526;
@@ -12,10 +12,10 @@
     text-align: center;
     margin: 0; padding: 20px;
   }
-  select {
+  select, input {
     font-size: 1.2rem;
     padding: 10px;
-    margin-bottom: 30px;
+    margin: 10px 0 30px;
     border-radius: 6px;
     border: none;
     outline: none;
@@ -24,9 +24,11 @@
     color: #0fb1a8;
     cursor: pointer;
   }
+  h1 {
+    margin-bottom: 10px;
+  }
   h2 {
-    margin: 10px 0 5px;
-    color: #0fb1a8;
+    margin: 10px 0;
   }
   /* Tube Level */
   #tubeLevel {
@@ -51,22 +53,20 @@
     left: calc(50% - 20px);
     transition: left 0.05s;
   }
-  /* Center lines inside tube */
-  #tubeLevel::before,
-  #tubeLevel::after {
+  /* Two center lines inside tube */
+  #tubeLevel::before, #tubeLevel::after {
     content: "";
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 0; bottom: 0;
     width: 4px;
     background: #0fb1a8;
-    opacity: 0.8;
+    opacity: 0.6;
   }
   #tubeLevel::before {
-    left: calc(50% - 20px); /* left line - exactly bubble width away from center */
+    left: calc(50% - 30px);
   }
   #tubeLevel::after {
-    left: calc(50% + 20px); /* right line */
+    left: calc(50% + 30px);
   }
   /* Circular Level */
   #circleLevel {
@@ -96,11 +96,22 @@
     margin-top: 15px;
     color: #9fb3c8;
   }
+  .calc-label {
+    font-size: 1rem;
+    color: #9fb3c8;
+    margin-top: 10px;
+  }
+  #resultSlope {
+    margin-top: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #0fb1a8;
+  }
 </style>
 </head>
 <body>
 
-<h1>Select Spirit Level Tool</h1>
+<h1>Spirit Level with Slope Calculator</h1>
 
 <select id="levelSelector" aria-label="Select level type">
   <option value="">-- Choose a level tool --</option>
@@ -109,14 +120,21 @@
 </select>
 
 <div id="tubeLevel">
+  <h2>Horizontal Tube Level</h2>
   <div id="tubeBubble"></div>
+  <div class="tilt-display" id="tubeTilt">Tilt (γ): 0°</div>
+  <div class="calc-label">Enter tile length (mm):</div>
+  <input type="number" id="tubeLength" min="1" placeholder="e.g. 600" />
+  <div id="tubeSlope" class="tilt-display">Slope height difference: 0 mm</div>
 </div>
-<div class="tilt-display" id="tubeTilt" style="max-width:400px; margin: 0 auto;">Tilt (γ): 0°</div>
 
 <div id="circleLevel">
   <h2>Circle & Dot Level</h2>
   <div id="dot"></div>
   <div class="tilt-display" id="circleTilt">Tilt (β, γ): 0°, 0°</div>
+  <div class="calc-label">Enter tile length (mm):</div>
+  <input type="number" id="circleLength" min="1" placeholder="e.g. 600" />
+  <div id="circleSlope" class="tilt-display">Slope height difference: 0 mm</div>
 </div>
 
 <audio id="beep" src="https://www.soundjay.com/buttons/beep-07.wav" preload="auto"></audio>
@@ -135,40 +153,54 @@ const tubeBubble = document.getElementById("tubeBubble");
 const dot = document.getElementById("dot");
 const tubeTilt = document.getElementById("tubeTilt");
 const circleTilt = document.getElementById("circleTilt");
+const tubeLengthInput = document.getElementById("tubeLength");
+const circleLengthInput = document.getElementById("circleLength");
+const tubeSlope = document.getElementById("tubeSlope");
+const circleSlope = document.getElementById("circleSlope");
 const beep = document.getElementById("beep");
 
 let lastBeepTime = 0;
 
-// Show selected level only
 levelSelector.addEventListener("change", () => {
   if(levelSelector.value === "tube") {
     tubeLevel.style.display = "block";
-    tubeTilt.style.display = "block";
     circleLevel.style.display = "none";
   } else if(levelSelector.value === "circle") {
     tubeLevel.style.display = "none";
-    tubeTilt.style.display = "none";
     circleLevel.style.display = "block";
   } else {
     tubeLevel.style.display = "none";
-    tubeTilt.style.display = "none";
     circleLevel.style.display = "none";
   }
 });
 
-// Device orientation handler
+function calculateSlopeHeight(length_mm, angle_deg) {
+  // Convert degrees to radians
+  let rad = angle_deg * Math.PI / 180;
+  // Calculate slope height difference (h = L * tan(theta))
+  return length_mm * Math.tan(rad);
+}
+
 window.addEventListener("deviceorientation", (event) => {
   let gamma = event.gamma || 0; // left-right tilt [-90, 90]
   let beta = event.beta || 0;   // front-back tilt [-180,180]
 
-  // Tube Level (horizontal left-right only)
   if(levelSelector.value === "tube") {
     let tubeWidth = tubeLevel.clientWidth - tubeBubble.clientWidth;
     let posX = tubeWidth / 2 + (gamma / 45) * (tubeWidth / 2);
     posX = Math.max(0, Math.min(tubeWidth, posX));
     tubeBubble.style.left = posX + "px";
 
-    tubeTilt.textContent = `Tilt (γ): ${gamma.toFixed(1)}°`;
+    tubeTilt.textContent = `Tilt (γ): ${gamma.toFixed(2)}°`;
+
+    // Calculate slope height difference based on input length
+    let length = parseFloat(tubeLengthInput.value);
+    if(length && length > 0) {
+      let slopeMM = calculateSlopeHeight(length, gamma);
+      tubeSlope.textContent = `Slope height difference: ${slopeMM.toFixed(2)} mm`;
+    } else {
+      tubeSlope.textContent = `Slope height difference: -`;
+    }
 
     if(Math.abs(gamma) < 2) {
       tubeBubble.classList.add("level-ok");
@@ -181,7 +213,6 @@ window.addEventListener("deviceorientation", (event) => {
     }
   }
 
-  // Circle & Dot Level (2D movement)
   if(levelSelector.value === "circle") {
     let radius = (circleLevel.clientWidth - dot.clientWidth) / 2;
     let x = radius + (gamma / 45) * radius;
@@ -191,7 +222,18 @@ window.addEventListener("deviceorientation", (event) => {
     dot.style.left = x + "px";
     dot.style.top = y + "px";
 
-    circleTilt.textContent = `Tilt (β, γ): ${beta.toFixed(1)}°, ${gamma.toFixed(1)}°`;
+    circleTilt.textContent = `Tilt (β, γ): ${beta.toFixed(2)}°, ${gamma.toFixed(2)}°`;
+
+    // Calculate slope height difference based on input length and combined tilt
+    let length = parseFloat(circleLengthInput.value);
+    if(length && length > 0) {
+      // Calculate total tilt angle magnitude
+      let totalTilt = Math.sqrt(beta*beta + gamma*gamma);
+      let slopeMM = calculateSlopeHeight(length, totalTilt);
+      circleSlope.textContent = `Slope height difference: ${slopeMM.toFixed(2)} mm`;
+    } else {
+      circleSlope.textContent = `Slope height difference: -`;
+    }
 
     if(Math.abs(gamma) < 2 && Math.abs(beta) < 2) {
       dot.classList.add("level-ok");
@@ -205,9 +247,8 @@ window.addEventListener("deviceorientation", (event) => {
   }
 });
 
-// Initially hide levels and tilt displays
+// Hide both levels initially
 tubeLevel.style.display = "none";
-tubeTilt.style.display = "none";
 circleLevel.style.display = "none";
 </script>
 
