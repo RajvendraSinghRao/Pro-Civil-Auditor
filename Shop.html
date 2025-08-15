@@ -3,25 +3,70 @@
 <head>
   <title>Deals & Offers</title>
   <style>
-    body { font-family: Arial; background: #f4f4f4; }
-    .product { background: white; margin: 15px; padding: 15px; border-radius: 10px; }
-    a { text-decoration: none; color: white; background: #28a745; padding: 8px 12px; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+      margin: 0;
+    }
+    h1 {
+      padding: 20px;
+      background: #ff6600;
+      color: white;
+    }
+    .products {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 20px;
+    }
+    .product {
+      margin: 15px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .product:hover {
+      transform: scale(1.05);
+    }
+    .product img {
+      display: block;
+      width: 250px;
+      height: auto;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>Today's Best Deals</h1>
 
+<h1>🔥 Hot Deals 🔥</h1>
+
+<div class="products">
+
+  <!-- Product 1 -->
   <div class="product">
-    <h2>Bluetooth Earbuds</h2>
-    <p>High-quality sound, long battery life.</p>
-    <a href="YOUR_EARNKARO_LINK" target="_blank">Buy Now</a>
+    <a href="YOUR_EARNKARO_LINK_1" target="_blank">
+      <img src="IMAGE_URL_1" alt="Product 1">
+    </a>
   </div>
 
+  <!-- Product 2 -->
   <div class="product">
-    <h2>Men's Running Shoes</h2>
-    <p>Comfortable and durable sports shoes.</p>
-    <a href="YOUR_EARNKARO_LINK" target="_blank">Buy Now</a>
+    <a href="YOUR_EARNKARO_LINK_2" target="_blank">
+      <img src="IMAGE_URL_2" alt="Product 2">
+    </a>
   </div>
+
+  <!-- Product 3 -->
+  <div class="product">
+    <a href="YOUR_EARNKARO_LINK_3" target="_blank">
+      <img src="IMAGE_URL_3" alt="Product 3">
+    </a>
+  </div>
+
+</div>
 
 </body>
 </html>
