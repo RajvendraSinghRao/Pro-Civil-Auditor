@@ -104,6 +104,10 @@
     <option value="sqmi">Square Mile</option>
     <option value="acre">Acre</option>
     <option value="hectare">Hectare</option>
+    <option value="sqft">Square Feet</option>
+    <option value="sqinch">Square Inch</option>
+    <option value="sqcm">Square Centimeter</option>
+    <option value="sqmm">Square Millimeter</option>
   </select>
   <select id="areaTo">
     <option value="sqm">Square Meter</option>
@@ -111,6 +115,10 @@
     <option value="sqmi">Square Mile</option>
     <option value="acre">Acre</option>
     <option value="hectare">Hectare</option>
+    <option value="sqft">Square Feet</option>
+    <option value="sqinch">Square Inch</option>
+    <option value="sqcm">Square Centimeter</option>
+    <option value="sqmm">Square Millimeter</option>
   </select>
   <button class="calculate" onclick="convertArea()">Convert</button>
   <div class="result" id="areaResult"></div>
@@ -281,7 +289,7 @@ function convertArea(){
   let v=parseFloat(document.getElementById("areaInput").value);
   let from=document.getElementById("areaFrom").value;
   let to=document.getElementById("areaTo").value;
-  let rates={sqm:1,sqkm:1e6,sqmi:2.59e6,acre:4046.86,hectare:10000};
+  let rates={sqm:1,sqkm:1e6,sqmi:2.59e6,acre:4046.86,hectare:10000,sqft: 0.092903,sqin: 0.00064516,sqcm: 0.0001,sqmm: 0.000001};
   let res=v*rates[from]/rates[to];
   document.getElementById("areaResult").innerText=res+" "+to;
 }
