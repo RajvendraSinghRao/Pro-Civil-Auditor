@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Unit Converter</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #031526; color: #fff;
+  }
+  header {
+    text-align: center;
+    padding: 15px;
+    background: #07293a;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .tabs {
+    display: flex; overflow-x: auto;
+    background: #0b3d56;
+  }
+  .tabs button {
+    flex: 1; padding: 12px; border: none;
+    background: #0b3d56; color: #fff;
+    font-size: 14px; cursor: pointer;
+  }
+  .tabs button.active {
+    background: #0fb1a8;
+    font-weight: bold;
+  }
+  .converter {
+    display: none; padding: 20px;
+  }
+  .converter.active { display: block; }
+  input, select, button {
+    width: 100%; padding: 10px;
+    margin: 8px 0; border-radius: 8px;
+    border: none; font-size: 16px;
+  }
+  button.calculate {
+    background: #0fb1a8; color: #fff;
+    font-weight: bold;
+  }
+  .result {
+    margin-top: 10px; font-size: 18px;
+    font-weight: bold; color: #0fb1a8;
+  }
+</style>
+</head>
+<body>
+
+<header>📏 Pro Unit Converter</header>
+
+<div class="tabs" id="tabButtons">
+  <button onclick="showTab('length')" class="active">Length</button>
+  <button onclick="showTab('area')">Area</button>
+  <button onclick="showTab('temperature')">Temp</button>
+  <button onclick="showTab('volume')">Volume</button>
+  <button onclick="showTab('mass')">Mass</button>
+  <button onclick="showTab('data')">Data</button>
+  <button onclick="showTab('speed')">Speed</button>
+  <button onclick="showTab('time')">Time</button>
+  <button onclick="showTab('tip')">Tip</button>
+  <button onclick="showTab('percent')">%</button>
+</div>
+
+<!-- Length Converter -->
+<div class="converter active" id="length">
+  <h3>Length Converter</h3>
+  <input type="number" id="lenInput" placeholder="Enter value">
+  <select id="lenFrom">
+    <option value="m">Meters</option>
+    <option value="km">Kilometers</option>
+    <option value="cm">Centimeters</option>
+    <option value="mm">Millimeters</option>
+    <option value="mi">Miles</option>
+    <option value="yd">Yards</option>
+    <option value="ft">Feet</option>
+    <option value="in">Inches</option>
+  </select>
+  <select id="lenTo">
+    <option value="m">Meters</option>
+    <option value="km">Kilometers</option>
+    <option value="cm">Centimeters</option>
+    <option value="mm">Millimeters</option>
+    <option value="mi">Miles</option>
+    <option value="yd">Yards</option>
+    <option value="ft">Feet</option>
+    <option value="in">Inches</option>
+  </select>
+  <button class="calculate" onclick="convertLength()">Convert</button>
+  <div class="result" id="lenResult"></div>
+</div>
+
+<!-- Area Converter -->
+<div class="converter" id="area">
+  <h3>Area Converter</h3>
+  <input type="number" id="areaInput" placeholder="Enter value">
+  <select id="areaFrom">
+    <option value="sqm">Square Meter</option>
+    <option value="sqkm">Square Kilometer</option>
+    <option value="sqmi">Square Mile</option>
+    <option value="acre">Acre</option>
+    <option value="hectare">Hectare</option>
+  </select>
+  <select id="areaTo">
+    <option value="sqm">Square Meter</option>
+    <option value="sqkm">Square Kilometer</option>
+    <option value="sqmi">Square Mile</option>
+    <option value="acre">Acre</option>
+    <option value="hectare">Hectare</option>
+  </select>
+  <button class="calculate" onclick="convertArea()">Convert</button>
+  <div class="result" id="areaResult"></div>
+</div>
+
+<!-- Temperature -->
+<div class="converter" id="temperature">
+  <h3>Temperature Converter</h3>
+  <input type="number" id="tempInput" placeholder="Enter value">
+  <select id="tempFrom">
+    <option value="C">Celsius</option>
+    <option value="F">Fahrenheit</option>
+    <option value="K">Kelvin</option>
+  </select>
+  <select id="tempTo">
+    <option value="C">Celsius</option>
+    <option value="F">Fahrenheit</option>
+    <option value="K">Kelvin</option>
+  </select>
+  <button class="calculate" onclick="convertTemp()">Convert</button>
+  <div class="result" id="tempResult"></div>
+</div>
+
+<!-- Volume -->
+<div class="converter" id="volume">
+  <h3>Volume Converter</h3>
+  <input type="number" id="volInput" placeholder="Enter value">
+  <select id="volFrom">
+    <option value="l">Liters</option>
+    <option value="ml">Milliliters</option>
+    <option value="gal">Gallons</option>
+    <option value="qt">Quarts</option>
+    <option value="pt">Pints</option>
+  </select>
+  <select id="volTo">
+    <option value="l">Liters</option>
+    <option value="ml">Milliliters</option>
+    <option value="gal">Gallons</option>
+    <option value="qt">Quarts</option>
+    <option value="pt">Pints</option>
+  </select>
+  <button class="calculate" onclick="convertVolume()">Convert</button>
+  <div class="result" id="volResult"></div>
+</div>
+
+<!-- Mass -->
+<div class="converter" id="mass">
+  <h3>Mass Converter</h3>
+  <input type="number" id="massInput" placeholder="Enter value">
+  <select id="massFrom">
+    <option value="kg">Kilogram</option>
+    <option value="g">Gram</option>
+    <option value="lb">Pound</option>
+    <option value="oz">Ounce</option>
+    <option value="ton">Tonne</option>
+  </select>
+  <select id="massTo">
+    <option value="kg">Kilogram</option>
+    <option value="g">Gram</option>
+    <option value="lb">Pound</option>
+    <option value="oz">Ounce</option>
+    <option value="ton">Tonne</option>
+  </select>
+  <button class="calculate" onclick="convertMass()">Convert</button>
+  <div class="result" id="massResult"></div>
+</div>
+
+<!-- Data -->
+<div class="converter" id="data">
+  <h3>Data Converter</h3>
+  <input type="number" id="dataInput" placeholder="Enter value">
+  <select id="dataFrom">
+    <option value="B">Bytes</option>
+    <option value="KB">Kilobytes</option>
+    <option value="MB">Megabytes</option>
+    <option value="GB">Gigabytes</option>
+    <option value="TB">Terabytes</option>
+  </select>
+  <select id="dataTo">
+    <option value="B">Bytes</option>
+    <option value="KB">Kilobytes</option>
+    <option value="MB">Megabytes</option>
+    <option value="GB">Gigabytes</option>
+    <option value="TB">Terabytes</option>
+  </select>
+  <button class="calculate" onclick="convertData()">Convert</button>
+  <div class="result" id="dataResult"></div>
+</div>
+
+<!-- Speed -->
+<div class="converter" id="speed">
+  <h3>Speed Converter</h3>
+  <input type="number" id="speedInput" placeholder="Enter value">
+  <select id="speedFrom">
+    <option value="mps">m/s</option>
+    <option value="kph">km/h</option>
+    <option value="mph">mph</option>
+    <option value="kn">Knots</option>
+  </select>
+  <select id="speedTo">
+    <option value="mps">m/s</option>
+    <option value="kph">km/h</option>
+    <option value="mph">mph</option>
+    <option value="kn">Knots</option>
+  </select>
+  <button class="calculate" onclick="convertSpeed()">Convert</button>
+  <div class="result" id="speedResult"></div>
+</div>
+
+<!-- Time -->
+<div class="converter" id="time">
+  <h3>Time Converter</h3>
+  <input type="number" id="timeInput" placeholder="Enter value">
+  <select id="timeFrom">
+    <option value="s">Seconds</option>
+    <option value="min">Minutes</option>
+    <option value="h">Hours</option>
+    <option value="d">Days</option>
+  </select>
+  <select id="timeTo">
+    <option value="s">Seconds</option>
+    <option value="min">Minutes</option>
+    <option value="h">Hours</option>
+    <option value="d">Days</option>
+  </select>
+  <button class="calculate" onclick="convertTime()">Convert</button>
+  <div class="result" id="timeResult"></div>
+</div>
+
+<!-- Tip Calculator -->
+<div class="converter" id="tip">
+  <h3>Tip Calculator</h3>
+  <input type="number" id="billAmount" placeholder="Bill Amount">
+  <input type="number" id="tipPercent" placeholder="Tip %">
+  <button class="calculate" onclick="calcTip()">Calculate</button>
+  <div class="result" id="tipResult"></div>
+</div>
+
+<!-- Percentage Calculator -->
+<div class="converter" id="percent">
+  <h3>Percentage Calculator</h3>
+  <input type="number" id="part" placeholder="Part">
+  <input type="number" id="whole" placeholder="Whole">
+  <button class="calculate" onclick="calcPercent()">Calculate</button>
+  <div class="result" id="percentResult"></div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.converter').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Length
+function convertLength(){
+  let v=parseFloat(document.getElementById("lenInput").value);
+  let from=document.getElementById("lenFrom").value;
+  let to=document.getElementById("lenTo").value;
+  let rates={m:1,km:1000,cm:0.01,mm:0.001,mi:1609.34,yd:0.9144,ft:0.3048,in:0.0254};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("lenResult").innerText=res+" "+to;
+}
+
+// Area
+function convertArea(){
+  let v=parseFloat(document.getElementById("areaInput").value);
+  let from=document.getElementById("areaFrom").value;
+  let to=document.getElementById("areaTo").value;
+  let rates={sqm:1,sqkm:1e6,sqmi:2.59e6,acre:4046.86,hectare:10000};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("areaResult").innerText=res+" "+to;
+}
+
+// Temp
+function convertTemp(){
+  let v=parseFloat(document.getElementById("tempInput").value);
+  let from=document.getElementById("tempFrom").value;
+  let to=document.getElementById("tempTo").value;
+  let c;
+  if(from=="C") c=v;
+  else if(from=="F") c=(v-32)*(5/9);
+  else if(from=="K") c=v-273.15;
+  let res=c;
+  if(to=="C") res=c;
+  else if(to=="F") res=(c*9/5)+32;
+  else if(to=="K") res=c+273.15;
+  document.getElementById("tempResult").innerText=res+" "+to;
+}
+
+// Volume
+function convertVolume(){
+  let v=parseFloat(document.getElementById("volInput").value);
+  let from=document.getElementById("volFrom").value;
+  let to=document.getElementById("volTo").value;
+  let rates={l:1,ml:0.001,gal:3.785,qt:0.946,pt:0.473};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("volResult").innerText=res+" "+to;
+}
+
+// Mass
+function convertMass(){
+  let v=parseFloat(document.getElementById("massInput").value);
+  let from=document.getElementById("massFrom").value;
+  let to=document.getElementById("massTo").value;
+  let rates={kg:1,g:0.001,lb:0.4536,oz:0.02835,ton:1000};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("massResult").innerText=res+" "+to;
+}
+
+// Data
+function convertData(){
+  let v=parseFloat(document.getElementById("dataInput").value);
+  let from=document.getElementById("dataFrom").value;
+  let to=document.getElementById("dataTo").value;
+  let rates={B:1,KB:1024,MB:1048576,GB:1073741824,TB:1099511627776};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("dataResult").innerText=res+" "+to;
+}
+
+// Speed
+function convertSpeed(){
+  let v=parseFloat(document.getElementById("speedInput").value);
+  let from=document.getElementById("speedFrom").value;
+  let to=document.getElementById("speedTo").value;
+  let rates={mps:1,kph:0.27778,mph:0.44704,kn:0.51444};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("speedResult").innerText=res+" "+to;
+}
+
+// Time
+function convertTime(){
+  let v=parseFloat(document.getElementById("timeInput").value);
+  let from=document.getElementById("timeFrom").value;
+  let to=document.getElementById("timeTo").value;
+  let rates={s:1,min:60,h:3600,d:86400};
+  let res=v*rates[from]/rates[to];
+  document.getElementById("timeResult").innerText=res+" "+to;
+}
+
+// Tip
+function calcTip(){
+  let bill=parseFloat(document.getElementById("billAmount").value);
+  let tip=parseFloat(document.getElementById("tipPercent").value);
+  let res=bill*(tip/100);
+  document.getElementById("tipResult").innerText="Tip: "+res.toFixed(2)+" | Total: "+(bill+res).toFixed(2);
+}
+
+// Percent
+function calcPercent(){
+  let part=parseFloat(document.getElementById("part").value);
+  let whole=parseFloat(document.getElementById("whole").value);
+  let res=(part/whole)*100;
+  document.getElementById("percentResult").innerText=res.toFixed(2)+" %";
+}
+</script>
+</body>
+</html>
