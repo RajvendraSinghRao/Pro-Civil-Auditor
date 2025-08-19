@@ -267,6 +267,13 @@
 </div>
 
 <script>
+
+// Access control: Redirect if flags missing in localStorage
+if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
+  alert("Access Denied. Please start from the Home Page.");
+  window.location.href = "index.html";
+}
+  
 function showTab(id) {
   document.querySelectorAll('.converter').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
