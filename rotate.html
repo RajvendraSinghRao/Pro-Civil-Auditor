@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phone Spin Vibration Tester</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111a2b; --muted:#9fb3c8; --accent:#37d3b6; --accent2:#7aa7ff; --danger:#ff6b6b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 120% -10%, #1a2950 0%, transparent 50%), radial-gradient(900px 700px at -20% 120%, #0e3a35 0%, transparent 55%), var(--bg);color:#e6eef7}
+    .wrap{max-width:960px;margin:0 auto;padding:28px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,0.3);padding:22px}
+    h1{font-size:clamp(24px,3vw,36px);margin:10px 0 6px}
+    p.lead{color:var(--muted);margin-top:0}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+    .btn{appearance:none;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#08121e;padding:12px 14px;border-radius:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(55,211,182,0.35);transition:transform .1s ease, filter .2s ease}
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:#1a2844;color:#e6eef7;border:1px solid rgba(255,255,255,0.1);box-shadow:none;font-weight:600}
+    .btn.danger{background:linear-gradient(135deg,#ff6b6b,#e04848);color:#1b0b0b;box-shadow:0 6px 18px rgba(255,107,107,0.35)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;gap:6px}
+    label{color:#b9c7da;font-size:14px}
+    input,textarea,select{background:#0c1424;border:1px solid rgba(255,255,255,0.08);color:#e6eef7;border-radius:12px;padding:10px 12px;font-size:14px;outline:none}
+    code.kbd{background:#0c1424;border:1px solid rgba(255,255,255,0.08);padding:2px 6px;border-radius:6px}
+    .note{font-size:13px;color:#a7b7cd}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:#0f1a2d;border:1px solid rgba(255,255,255,0.08)}
+    .ok{color:#54d39a}
+    .bad{color:#ff8b8b}
+    .log{min-height:56px;white-space:pre-wrap}
+    .preset{display:flex;flex-wrap:wrap;gap:10px}
+    .preset button{background:#13213b;border:1px solid rgba(255,255,255,0.08);color:#e6eef7;padding:8px 10px;border-radius:12px;cursor:pointer}
+    footer{opacity:.8;margin-top:18px;font-size:12px;color:#a5b5cc}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Phone Spin Vibration Tester</h1>
+      <p class="lead">Attempts to reproduce the classic Cycloramic-style spin using the web <code class="kbd">navigator.vibrate()</code> API. Results depend on your phone model, motor type, balance, and surface friction.</p>
+
+      <div class="row" style="align-items:center;justify-content:space-between;margin:10px 0 16px">
+        <div class="chip" id="supportChip">Checking vibration support…</div>
+        <div class="chip">Best surface: <strong>glass</strong> / <strong>polished</strong></div>
+      </div>
+
+      <div class="grid" style="margin-bottom:14px">
+        <div class="field">
+          <label>Preset patterns</label>
+          <div class="preset">
+            <button type="button" data-pattern="50,50">Buzz 50/50</button>
+            <button type="button" data-pattern="30,30">Buzz 30/30</button>
+            <button type="button" data-pattern="75,25">Kick 75/25</button>
+            <button type="button" data-pattern="100,50">Strong 100/50</button>
+            <button type="button" data-pattern="15,60">Tap 15/60</button>
+          </div>
+          <span class="note">Numbers are <em>vibrate ms, pause ms</em>. Try different pairs to see what your phone likes.</span>
+        </div>
+        <div class="field">
+          <label>Custom pattern (ms)</label>
+          <div class="row">
+            <input id="onMs" type="number" min="1" step="1" value="50" style="width:120px"/>
+            <input id="offMs" type="number" min="1" step="1" value="50" style="width:120px"/>
+            <input id="ramp" type="number" min="0" step="1" value="0" style="width:140px" placeholder="ramp after N cycles (optional)"/>
+          </div>
+          <span class="note">Optional <strong>ramp</strong>: after N cycles, increase intensity by shortening pause.</span>
+        </div>
+        <div class="field">
+          <label>Safety timeout (seconds)</label>
+          <input id="timeoutSec" type="number" min="1" step="1" value="30" style="width:140px"/>
+          <span class="note">Stops automatically to protect your motor & battery.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="startBtn">Start Spin Test</button>
+        <button class="btn secondary" id="pulseBtn">Single Pulse</button>
+        <button class="btn danger" id="stopBtn">Stop</button>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <strong>Instructions</strong>
+        <ol>
+          <li>Find a <strong>very smooth, level</strong> surface (glass table is best).</li>
+          <li>Stand your phone <strong>upright</strong> on its <strong>flat bottom edge</strong>.</li>
+          <li>Tap <em>Start Spin Test</em> and try different patterns (50/50, 30/30, etc.).</li>
+          <li>If balance is perfect and your motor is ERM-type, you may see a slow rotation.</li>
+        </ol>
+        <p class="note">Not all phones support this. Many modern phones use LRA haptic motors, which usually <em>won't</em> spin the device.</p>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <strong>Log</strong>
+        <div id="log" class="log note"></div>
+      </div>
+
+      <footer>
+        Privacy: No data is collected. Works only after user interaction and on secure contexts (HTTPS). iOS Safari support is limited.
+      </footer>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const supportChip = document.getElementById('supportChip');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const pulseBtn = document.getElementById('pulseBtn');
+  const onMs = document.getElementById('onMs');
+  const offMs = document.getElementById('offMs');
+  const ramp = document.getElementById('ramp');
+  const timeoutSec = document.getElementById('timeoutSec');
+  const logEl = document.getElementById('log');
+
+  const presets = Array.from(document.querySelectorAll('.preset button'));
+
+  let intervalId = null;
+  let startTime = 0;
+  let cycles = 0;
+
+  function log(msg){
+    const t = new Date().toLocaleTimeString();
+    logEl.textContent += `[${t}] ${msg}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function vib(ms){
+    try{
+      const ok = navigator.vibrate(ms);
+      if(ok === false){ log('vibrate() returned false (maybe blocked).'); }
+    }catch(e){ log('Error: '+e.message); }
+  }
+
+  function checkSupport(){
+    const has = 'vibrate' in navigator;
+    const secure = window.isSecureContext;
+    supportChip.innerHTML = has && secure
+      ? `<span class="ok">✔</span> Vibration API available`
+      : `<span class="bad">✖</span> ${has? 'Needs HTTPS secure context' : 'Vibration API not supported'}`;
+  }
+
+  function stop(){
+    if(intervalId){ clearInterval(intervalId); intervalId = null; }
+    navigator.vibrate(0);
+    log('Stopped.');
+  }
+
+  function startLoop(){
+    const on = Math.max(1, +onMs.value|0);
+    const off = Math.max(1, +offMs.value|0);
+    const rampAfter = Math.max(0, +ramp.value|0);
+    const limitMs = Math.max(1, (+timeoutSec.value|0)*1000);
+
+    stop();
+    cycles = 0;
+    startTime = performance.now();
+
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      if(elapsed >= limitMs){ stop(); return; }
+
+      let useOn = on, useOff = off;
+      if(rampAfter > 0 && cycles >= rampAfter){
+        // Ramp by reducing the pause down to a floor
+        useOff = Math.max(5, Math.floor(off * 0.6));
+      }
+
+      vib(useOn);
+      // schedule next pulse after on+off
+      const nextDelay = useOn + useOff;
+      cycles++;
+      intervalId = setTimeout(tick, nextDelay);
+    };
+
+    log(`Starting: on=${on}ms, off=${off}ms${rampAfter?`, ramp after ${rampAfter} cycles`:''}, timeout=${limitMs/1000}s`);
+    tick();
+  }
+
+  // UI events
+  startBtn.addEventListener('click', startLoop);
+  stopBtn.addEventListener('click', stop);
+  pulseBtn.addEventListener('click', ()=>{
+    const ms = Math.max(1, +onMs.value|0);
+    vib(ms);
+    log(`Single pulse ${ms}ms`);
+  });
+
+  presets.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [a,b] = btn.dataset.pattern.split(',').map(Number);
+      onMs.value = a; offMs.value = b; startLoop();
+    });
+  });
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) stop();
+  });
+
+  // First run
+  checkSupport();
+  window.addEventListener('securitypolicyviolation', ()=>log('CSP blocked something.')); 
+})();
+</script>
+</body>
+</html>
