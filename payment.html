@@ -3,86 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subscribe Now</title>
+  <title>Product Payment</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #0f3d66;
+      color: white;
       text-align: center;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 40px;
+      padding: 30px;
     }
-    h1 {
-      color: #333;
-    }
-    .plan-container {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 30px;
-      flex-wrap: wrap;
-    }
-    .plan {
+    .product {
       background: white;
-      border: 1px solid #ddd;
-      border-radius: 12px;
+      color: #0f3d66;
       padding: 20px;
-      width: 200px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .plan h2 {
-      margin: 0;
-      color: #222;
-    }
-    .price {
-      font-size: 24px;
-      margin: 15px 0;
-      color: #0077cc;
+      border-radius: 8px;
+      max-width: 400px;
+      margin: auto;
     }
     .btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #0077cc;
+      background: #0f3d66;
       color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-      transition: 0.3s;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
     }
     .btn:hover {
-      background: #005fa3;
+      background: #0c2d4a;
+    }
+
+    /* Popup form */
+    .popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .popup-content {
+      background: white;
+      color: #0f3d66;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 350px;
+      width: 80%;
+      text-align: center;
+    }
+    .input-box {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>Choose Your Subscription</h1>
-  <p>Select a plan and pay securely via UPI</p>
 
-  <div class="plan-container">
-    <div class="plan">
-      <h2>Basic</h2>
-      <div class="price">₹99</div>
-      <a class="btn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=99&cu=INR&tn=Subscription">
-        Pay ₹99
-      </a>
-    </div>
-    
-    <div class="plan">
-      <h2>Standard</h2>
-      <div class="price">₹199</div>
-      <a class="btn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=199&cu=INR&tn=Subscription">
-        Pay ₹199
-      </a>
-    </div>
-    
-    <div class="plan">
-      <h2>Premium</h2>
-      <div class="price">₹499</div>
-      <a class="btn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=499&cu=INR&tn=Subscription">
-        Pay ₹499
-      </a>
+  <h1>Buy Civil Tools Pack</h1>
+  <div class="product">
+    <h2>Area Calculator Pro</h2>
+    <p>Get full access to premium civil calculation tools.</p>
+    <h3>Price: ₹99</h3>
+    <button class="btn" onclick="startPayment()">Pay Now</button>
+  </div>
+
+  <!-- Popup for UPI ID confirmation -->
+  <div class="popup" id="upiPopup">
+    <div class="popup-content">
+      <h2>Payment Confirmation</h2>
+      <p>Enter the UPI ID you used to pay:</p>
+      <form id="upiForm">
+        <input type="text" id="upiId" name="UPI_ID" class="input-box" placeholder="example@upi" required>
+        <button type="submit" class="btn">Submit</button>
+      </form>
     </div>
   </div>
+
+  <script>
+    const upiPopup = document.getElementById("upiPopup");
+    const upiForm = document.getElementById("upiForm");
+
+    // Function called when user clicks Pay button
+    function startPayment() {
+      // Save flag in localStorage so we know payment was started
+      localStorage.setItem("paymentStarted", "true");
+
+      // Redirect to UPI payment link (example link, replace with yours)
+      window.location.href = "upi://pay?pa=yourupi@upi&pn=ProCivil&am=99&cu=INR";
+    }
+
+    // When page loads, check if payment was started
+    window.onload = function() {
+      if (localStorage.getItem("paymentStarted") === "true") {
+        // Show popup to enter UPI ID
+        upiPopup.style.display = "flex";
+      }
+    }
+
+    // Handle popup form submission
+    upiForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const upiId = document.getElementById("upiId").value.trim();
+
+      if (!upiId) {
+        alert("Please enter your UPI ID.");
+        return;
+      }
+
+      // Prepare data for Google Apps Script (same Excel sheet)
+      const formData = new FormData();
+      formData.append("UPI_ID", upiId);
+
+      // ✅ Replace this with your same Apps Script Web App URL
+      fetch("https://script.google.com/macros/s/AKfycbxqydckH3B-IdVG3ZdUIU0yTQKuFdwfiU_8UyrRwTZdNQ6sh98-KUn0EQiguAi2rT9O/exec", {
+        method: "POST",
+        body: formData,
+      })
+      .then(res => {
+        if (res.ok) {
+          alert("UPI ID submitted successfully!");
+          upiPopup.style.display = "none";
+          localStorage.removeItem("paymentStarted"); // reset flag
+        } else {
+          alert("Error saving UPI ID.");
+        }
+      })
+      .catch(err => {
+        alert("Network error.");
+        console.error(err);
+      });
+    });
+  </script>
+
 </body>
 </html>
-
