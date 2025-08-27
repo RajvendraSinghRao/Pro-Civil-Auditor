@@ -73,7 +73,7 @@
   <div id="popupForm">
     <div class="content">
       <h3>Confirm Payment</h3>
-      <p>Please fill in your detail and UPI ID should same from which you have done payment:</p>
+      <p>Please fill in your detail and Enter same UPI ID from which you have done payment:</p>
       <input type="text" id="nameInput" placeholder="Enter your Name" required />
       <input type="email" id="emailInput" placeholder="Enter your Email" required />
       <input type="tel" id="mobileInput" placeholder="Enter your Mobile Number" required />
@@ -131,7 +131,7 @@
       })
       .then(res => res.text())
       .then(data => {
-        alert("Payment details submitted successfully! In 24 Hours You will receive Access link on your Whatsapp and Gmail After opening that you wil get access of subscription and you have purchased || Warning The Access link is only valid for 24 hours after you receive it after 24 hours you cant open it and You will not get access to supscription ||");
+        alert("Payment details submitted successfully! In 24 Hours You will receive Access link on your Whatsapp and Gmail After opening that link you will get access of subscription which you have purchased || Warning The Access link is only valid for 24 hours after you receive it after 24 hours you cant open it and You will not get access to your supscription ||");
         localStorage.setItem("paymentDone", "true");
         localStorage.removeItem("paymentStart");
         document.getElementById("popupForm").style.display = "none";
