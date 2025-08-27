@@ -7,66 +7,73 @@
 <style>
 body {
     font-family: Arial, sans-serif;
-    background: #f0f2f5;
     padding: 20px;
-    max-width: 700px;
+    max-width: 800px;
     margin: auto;
+    background: #f0f2f5;
 }
-h2 {
-    text-align: center;
-    color: #333;
-}
+h2 { text-align: center; color: #333; }
 button {
     padding: 12px 20px;
+    margin: 10px 5px 20px 0;
     font-size: 16px;
-    margin: 10px 0;
-    cursor: pointer;
     border: none;
+    border-radius: 6px;
+    cursor: pointer;
     background-color: #007BFF;
     color: white;
-    border-radius: 6px;
     transition: 0.3s;
 }
-button:hover {
-    background-color: #0056b3;
-}
+button:hover { background-color: #0056b3; }
 #points {
-    margin-top: 20px;
     background: white;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-#points ul {
-    list-style-type: none;
-    padding-left: 0;
-}
-#points li {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-#error {
-    color: red;
-    margin-top: 10px;
-    font-weight: bold;
-}
+#points ul { list-style: none; padding-left: 0; }
+#points li { padding: 8px 0; border-bottom: 1px solid #eee; }
+#error { color: red; font-weight: bold; margin-top: 10px; }
+#map { width: 100%; height: 400px; margin-top: 20px; border-radius: 8px; }
 </style>
 </head>
 <body>
 
 <h2>Digital Plane Table (GPS)</h2>
 <button id="markBtn">Mark Current Point</button>
+<button id="exportBtn">Export CSV</button>
 <div id="points">
     <h3>Marked Points:</h3>
     <ul id="pointList"></ul>
 </div>
 <div id="error"></div>
+<div id="map"></div>
 
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
 <script>
 // Store points
 let points = [];
+let map, polyline, markers = [];
 
-// Haversine formula in meters
+// Initialize map
+function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 18,
+        center: {lat: 0, lng: 0},
+        mapTypeId: 'satellite'
+    });
+    polyline = new google.maps.Polyline({
+        path: [],
+        geodesic: true,
+        strokeColor: "#FF0000",
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+    });
+    polyline.setMap(map);
+}
+
+// Haversine formula
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI/180;
@@ -80,7 +87,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c; // meters
 }
 
-// Convert meters to feet & inches
+// Convert meters to feet/inches
 function metersToFeetInches(meters) {
     const totalInches = meters * 39.3701;
     const feet = Math.floor(totalInches / 12);
@@ -88,7 +95,7 @@ function metersToFeetInches(meters) {
     return `${feet}' ${inches}"`;
 }
 
-// Update list
+// Update point list
 function updatePointList() {
     const ul = document.getElementById('pointList');
     ul.innerHTML = "";
@@ -97,24 +104,36 @@ function updatePointList() {
         let distanceFeet = "";
         if(index > 0) {
             const prev = points[index-1];
-            distanceMeters = getDistance(prev.lat, prev.lon, p.lat, p.lon);
+            distanceMeters = getDistance(prev.lat, prev.lng, p.lat, p.lng);
             distanceFeet = metersToFeetInches(distanceMeters);
         }
         ul.innerHTML += `<li>
-            <strong>Point ${index+1}:</strong> (${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}) 
+            <strong>Point ${index+1}:</strong> (${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}) 
             ${distanceMeters ? `- Distance: ${distanceMeters.toFixed(2)} m / ${distanceFeet}` : ""}
         </li>`;
     });
 }
 
-// Mark current GPS point
+// Add point to map
+function addPointToMap(lat,lng) {
+    const position = {lat, lng};
+    const marker = new google.maps.Marker({position, map, label: `${points.length}`});
+    markers.push(marker);
+    const path = polyline.getPath();
+    path.push(position);
+    map.setCenter(position);
+}
+
+// Mark current point
 document.getElementById('markBtn').addEventListener('click', () => {
     const errorDiv = document.getElementById('error');
     errorDiv.innerText = "";
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
-            points.push({lat: pos.coords.latitude, lon: pos.coords.longitude});
+            const {latitude, longitude} = pos.coords;
+            points.push({lat: latitude, lng: longitude});
             updatePointList();
+            addPointToMap(latitude, longitude);
         }, err => {
             let msg = "";
             switch(err.code) {
@@ -130,7 +149,32 @@ document.getElementById('markBtn').addEventListener('click', () => {
         errorDiv.innerText = "Geolocation not supported by this browser.";
     }
 });
-</script>
 
+// Export CSV
+document.getElementById('exportBtn').addEventListener('click', () => {
+    if(points.length === 0) return alert("No points to export!");
+    let csv = "Point,Latitude,Longitude,Distance_m,Distance_ft_in\n";
+    points.forEach((p,i)=>{
+        let dMeters=0, dFeet="";
+        if(i>0){
+            const prev=points[i-1];
+            dMeters=getDistance(prev.lat,prev.lng,p.lat,p.lng);
+            dFeet=metersToFeetInches(dMeters);
+        }
+        csv += `${i+1},${p.lat},${p.lng},${dMeters.toFixed(2)},${dFeet}\n`;
+    });
+    const blob = new Blob([csv], {type: "text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "points.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+// Initialize map
+initMap();
+</script>
 </body>
 </html>
+
