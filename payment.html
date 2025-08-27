@@ -81,15 +81,12 @@
   </div>
 
   <script>
-    // Show popup when user comes back after payment
-    window.onload = function() {
-      // If already paid once, don’t show again
-      if (!localStorage.getItem("paymentDone")) {
-        setTimeout(() => {
-          document.getElementById("popupForm").style.display = "flex";
-        }, 3000); // wait 3 seconds after coming back
-      }
-    }
+   document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "visible" && !localStorage.getItem("paymentDone")) {
+    // Show popup only when user comes back from UPI
+    document.getElementById("popupForm").style.display = "flex";
+  }
+});
 
     function submitUPI() {
       const upiId = document.getElementById("upiInput").value.trim();
