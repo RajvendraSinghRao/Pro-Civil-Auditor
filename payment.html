@@ -81,13 +81,27 @@
   </div>
 
   <script>
-   document.addEventListener("visibilitychange", function() {
-  if (document.visibilityState === "visible" && !localStorage.getItem("paymentDone")) {
-    // Show popup only when user comes back from UPI
-    document.getElementById("popupForm").style.display = "flex";
-  }
-});
+    // Clear all flags on refresh (new page load)
+    window.addEventListener("load", function() {
+      localStorage.removeItem("paymentStart");
+      localStorage.removeItem("paymentDone");
+    });
 
+    // When Pay Now is clicked, mark payment started
+    document.getElementById("payBtn").addEventListener("click", function() {
+      localStorage.setItem("paymentStart", "true");
+    });
+
+    // Detect when user comes back to page
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === "visible") {
+        if (localStorage.getItem("paymentStart") && !localStorage.getItem("paymentDone")) {
+          document.getElementById("popupForm").style.display = "flex";
+        }
+      }
+    });
+
+    // Handle submit
     function submitUPI() {
       const upiId = document.getElementById("upiInput").value.trim();
       if (!upiId) {
@@ -97,11 +111,11 @@
 
       // Prepare form data
       const formData = new FormData();
-      formData.append("Name", upiId);          // Save UPI ID in Name column
-      formData.append("Email", "");            // empty (not used here)
-      formData.append("Password", "");         // empty
-      formData.append("Mobile", "");           // empty
-      formData.append("Course", "Subscription"); // save tn=Subscription
+      formData.append("Name", upiId);
+      formData.append("Email", "");
+      formData.append("Password", "");
+      formData.append("Mobile", "");
+      formData.append("Course", "Subscription");
 
       // Send to your Apps Script web app
       fetch("https://script.google.com/macros/s/AKfycbxqydckH3B-IdVG3ZdUIU0yTQKuFdwfiU_8UyrRwTZdNQ6sh98-KUn0EQiguAi2rT9O/exec", {
@@ -112,6 +126,7 @@
       .then(data => {
         alert("UPI confirmation submitted successfully!");
         localStorage.setItem("paymentDone", "true");
+        localStorage.removeItem("paymentStart"); // remove start flag after success
         document.getElementById("popupForm").style.display = "none";
       })
       .catch(err => {
