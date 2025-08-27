@@ -103,6 +103,17 @@
   </div>
 
 <script>
+  
+  if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
+  alert("Access Denied. Please start from the Home Page.");
+  window.location.href = "index.html";
+}
+
+  if (!localStorage.getItem("subscribed") ) {
+  alert("Access Denied. Please Buy The Subscription.");
+  window.location.href = "payment.html";
+}
+  
 (function(){
   const supportChip = document.getElementById('supportChip');
   const startBtn = document.getElementById('startBtn');
