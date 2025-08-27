@@ -3,80 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Concrete Quantity Calculator</title>
-<style>
-  body { font-family: Arial; text-align: center; padding: 20px; }
-  canvas { border: 1px solid #ccc; margin-top: 10px; }
-  input, button { padding: 8px; margin: 5px; font-size: 16px; }
-</style>
+<title>DWG Concrete Calculator</title>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.0.3/dist/dxf-parser.min.js"></script>
 </head>
 <body>
-<h2>Concrete Quantity Calculator from CAD PDF</h2>
-
-<input type="file" id="pdfUpload" accept="application/pdf"><br>
-<label>Enter slab/beam depth (m): </label>
-<input type="number" id="depthInput" step="0.01" value="0.15"><br>
+<h2>Concrete Quantity Calculator (DWG/DXF)</h2>
+<input type="file" id="fileInput" accept=".dxf,.dwg"><br><br>
+<label>Slab/Beam Depth (m): </label>
+<input type="number" id="depth" step="0.01" value="0.15"><br><br>
 <button id="calculateBtn">Calculate Concrete Volume</button>
 
-<canvas id="pdfCanvas" width="600" height="400"></canvas>
 <h3 id="result"></h3>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
-let pdfDoc = null;
-let pageNum = 1;
-let scale = 1.5;
-let canvas = document.getElementById('pdfCanvas');
-let ctx = canvas.getContext('2d');
-let rectangles = []; // Store demo slab areas
-
-document.getElementById('pdfUpload').addEventListener('change', async (e) => {
-  let file = e.target.files[0];
-  if (!file) return;
-  let fileReader = new FileReader();
-  fileReader.onload = async function() {
-    let typedarray = new Uint8Array(this.result);
-    pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
-    renderPage(pageNum);
-  };
-  fileReader.readAsArrayBuffer(file);
-});
-
-async function renderPage(num) {
-  let page = await pdfDoc.getPage(num);
-  let viewport = page.getViewport({ scale: scale });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  let renderContext = {
-    canvasContext: ctx,
-    viewport: viewport
-  };
-  await page.render(renderContext).promise;
-
-  // Demo: draw rectangles representing slabs/beams
-  rectangles = [
-    {x:50, y:50, w:200, h:150},
-    {x:300, y:100, w:200, h:100}
-  ];
-  ctx.strokeStyle = 'red';
-  ctx.lineWidth = 2;
-  rectangles.forEach(r => ctx.strokeRect(r.x, r.y, r.w, r.h));
+function calculatePolygonArea(points) {
+    let sum = 0;
+    for (let i=0;i<points.length;i++){
+        let j = (i+1) % points.length;
+        sum += points[i].x*points[j].y - points[j].x*points[i].y;
+    }
+    return Math.abs(sum)/2;
 }
 
 document.getElementById('calculateBtn').addEventListener('click', () => {
-  let depth = parseFloat(document.getElementById('depthInput').value);
-  if (!depth) { alert("Enter valid depth"); return; }
+    let file = document.getElementById('fileInput').files[0];
+    let depth = parseFloat(document.getElementById('depth').value);
+    if(!file || !depth){ alert("Select DXF/DWG file & enter depth"); return; }
 
-  let totalAreaPx = rectangles.reduce((sum, r) => sum + r.w * r.h, 0);
+    let reader = new FileReader();
+    reader.onload = function(e){
+        try {
+            let parser = new window.DxfParser();
+            let dxf = parser.parseSync(e.target.result);
+            let totalArea = 0;
 
-  // For demo, assume 1 px² = 0.0001 m²
-  let totalAreaM2 = totalAreaPx * 0.0001;
-  let volume = totalAreaM2 * depth;
+            dxf.entities.forEach(ent => {
+                if(ent.type === 'LWPOLYLINE' && ent.closed){
+                    let points = ent.vertices.map(v => ({x:v.x, y:v.y}));
+                    totalArea += calculatePolygonArea(points);
+                }
+            });
 
-  document.getElementById('result').innerHTML =
-    `Total slab/beam area: ${totalAreaM2.toFixed(2)} m²<br>
-     Concrete volume: ${volume.toFixed(2)} m³`;
+            let volume = totalArea * depth;
+            document.getElementById('result').innerHTML =
+                `Total slab/beam area: ${totalArea.toFixed(2)} units²<br>
+                 Concrete volume: ${volume.toFixed(2)} m³`;
+
+        } catch(err){
+            alert("Error parsing DXF/DWG: " + err);
+        }
+    };
+    reader.readAsText(file);
 });
+
 
   // ✅ When this page opens, mark user as subscribed
   localStorage.setItem("subscribed", "true");
