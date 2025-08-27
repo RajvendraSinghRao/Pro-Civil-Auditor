@@ -2,80 +2,59 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hot Deals</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pencil Sketch → CAD Plan</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f4f4f4;
-    margin: 0;
-    text-align: center;
-  }
-  h1 {
-    padding: 15px;
-    background: #ff6600;
-    color: white;
-    margin: 0;
-    font-size: 1.5rem;
-  }
-  .products {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    padding: 15px;
-  }
-  .product {
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-  }
-  .product:hover {
-    transform: scale(1.05);
-  }
-  .product img {
-    width: 100%;
-    height: auto;
-    display: block;
-    cursor: pointer;
-  }
+  body { font-family: Arial; text-align: center; margin: 20px; }
+  canvas { border: 1px solid #ccc; margin-top: 10px; }
 </style>
 </head>
 <body>
+<h2>Pencil Sketch to Digital Plan</h2>
+<input type="file" id="upload" accept="image/*">
+<br><br>
+<canvas id="inputCanvas" width="600" height="400"></canvas>
+<canvas id="outputCanvas" width="600" height="400"></canvas>
 
-<h1>🔥 Hot Deals 🔥</h1>
-
-<div class="products">
-
-  <!-- Product 1 -->
-  <div class="product">
-    <a href="YOUR_EARNKARO_LINK_1" target="_blank">
-      <img src="IMAGE_URL_1" alt="Product 1">
-    </a>
-  </div>
-
-  <!-- Product 2 -->
-  <div class="product">
-    <a href="YOUR_EARNKARO_LINK_2" target="_blank">
-      <img src="IMAGE_URL_2" alt="Product 2">
-    </a>
-  </div>
-
-  <!-- Product 3 -->
-  <div class="product">
-    <a href="YOUR_EARNKARO_LINK_3" target="_blank">
-      <img src="IMAGE_URL_3" alt="Product 3">
-    </a>
-  </div>
-
-</div>
-
+<script async src="https://docs.opencv.org/4.x/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"></script>
 <script>
+function onOpenCvReady() {
+  document.getElementById('upload').addEventListener('change', (e) => {
+    let file = e.target.files[0];
+    if (!file) return;
+    let img = new Image();
+    img.onload = function() {
+      let inputCanvas = document.getElementById('inputCanvas');
+      let outputCanvas = document.getElementById('outputCanvas');
+      inputCanvas.width = img.width;
+      inputCanvas.height = img.height;
+      outputCanvas.width = img.width;
+      outputCanvas.height = img.height;
+
+      let ctx = inputCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      // Convert to OpenCV Mat
+      let src = cv.imread(inputCanvas);
+      let dst = new cv.Mat();
+      cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+      cv.GaussianBlur(src, src, new cv.Size(3,3), 0, 0, cv.BORDER_DEFAULT);
+      cv.Canny(src, dst, 50, 150);
+
+      // Convert edges to image
+      cv.imshow(outputCanvas, dst);
+
+      src.delete(); dst.delete();
+    }
+    img.src = URL.createObjectURL(file);
+  });
+}
+</script>
+  
   // ✅ When this page opens, mark user as subscribed
   localStorage.setItem("subscribed", "true");
   console.log("User subscription status saved.");
 </script>
-
+  
 </body>
 </html>
