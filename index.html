@@ -83,6 +83,9 @@
   <!-- Unit Converter Button -->
   <button class="btn" onclick="goToUnitConverter()">Unit Converter</button>
 
+  <!-- Real Life Distance calculator Button -->
+  <button class="btn" onclick="goToMeasureRealLifeDistance()">Measure Real Life Distance</button>
+
 
   <script>
     function goToCalculator() {
@@ -148,6 +151,18 @@
 
       if (localStorage.getItem("registeredUser")) {
         window.location.href = "Unit_Converter.html";
+      } else {
+        window.location.href = "registration.html";
+      }
+    }
+
+
+    function goToMeasureRealLifeDistance() {
+      localStorage.setItem("entryAllowed", "true");
+      localStorage.setItem("fromHome", "true");
+
+      if (localStorage.getItem("registeredUser")) {
+        window.location.href = "real_life_distance_calculator.html";
       } else {
         window.location.href = "registration.html";
       }
