@@ -1,59 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Product Payment</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment - Pro Civil Auditor</title>
   <style>
     body {
+      margin: 0;
+      padding: 0;
       font-family: Arial, sans-serif;
       background: #0f3d66;
       color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
       text-align: center;
-      padding: 30px;
     }
-    .product {
-      background: white;
-      color: #0f3d66;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      margin: auto;
-    }
+
     .btn {
-      background: #0f3d66;
-      color: white;
-      padding: 12px 20px;
-      font-size: 1rem;
+      background: #fff;
+      color: #0f3d66;
       border: none;
-      border-radius: 6px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 8px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 20px;
     }
+
     .btn:hover {
-      background: #0c2d4a;
+      background: #f0f0f0;
     }
 
     /* Popup form */
-    .popup {
+    #popupForm {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
       justify-content: center;
       align-items: center;
     }
-    .popup-content {
-      background: white;
-      color: #0f3d66;
+    #popupForm .content {
+      background: #fff;
+      color: #000;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 8px;
+      width: 90%;
       max-width: 350px;
-      width: 80%;
       text-align: center;
     }
-    .input-box {
+    #popupForm input {
       width: 90%;
       padding: 10px;
       margin: 10px 0;
@@ -63,82 +62,66 @@
   </style>
 </head>
 <body>
+  <h2>Pay ₹99 for Subscription</h2>
+  <p>Click the button below to pay using UPI.</p>
 
-  <h1>Buy Civil Tools Pack</h1>
-  <div class="product">
-    <h2>Area Calculator Pro</h2>
-    <p>Get full access to premium civil calculation tools.</p>
-    <h3>Price: ₹99</h3>
-    <button class="btn" onclick="startPayment()">Pay Now</button>
-  </div>
+  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=99&cu=INR&tn=Subscription">
+    <button class="btn">Pay Now</button>
+  </a>
 
-  <!-- Popup for UPI ID confirmation -->
-  <div class="popup" id="upiPopup">
-    <div class="popup-content">
-      <h2>Payment Confirmation</h2>
-      <p>Enter the UPI ID you used to pay:</p>
-      <form id="upiForm">
-        <input type="text" id="upiId" name="UPI_ID" class="input-box" placeholder="example@upi" required>
-        <button type="submit" class="btn">Submit</button>
-      </form>
+  <!-- Popup Form -->
+  <div id="popupForm">
+    <div class="content">
+      <h3>Confirm Payment</h3>
+      <p>Enter the UPI ID from which you made the payment:</p>
+      <input type="text" id="upiInput" placeholder="Enter your UPI ID" required />
+      <br/>
+      <button class="btn" onclick="submitUPI()">Submit</button>
     </div>
   </div>
 
   <script>
-    const upiPopup = document.getElementById("upiPopup");
-    const upiForm = document.getElementById("upiForm");
-
-    // Function called when user clicks Pay button
-    function startPayment() {
-      // Save flag in localStorage so we know payment was started
-      localStorage.setItem("paymentStarted", "true");
-
-      // Redirect to UPI payment link (example link, replace with yours)
-      window.location.href = "upi://pay?pa=yourupi@upi&pn=ProCivil&am=99&cu=INR";
-    }
-
-    // When page loads, check if payment was started
+    // Show popup when user comes back after payment
     window.onload = function() {
-      if (localStorage.getItem("paymentStarted") === "true") {
-        // Show popup to enter UPI ID
-        upiPopup.style.display = "flex";
+      // If already paid once, don’t show again
+      if (!localStorage.getItem("paymentDone")) {
+        setTimeout(() => {
+          document.getElementById("popupForm").style.display = "flex";
+        }, 3000); // wait 3 seconds after coming back
       }
     }
 
-    // Handle popup form submission
-    upiForm.addEventListener("submit", function(e) {
-      e.preventDefault();
-      const upiId = document.getElementById("upiId").value.trim();
-
+    function submitUPI() {
+      const upiId = document.getElementById("upiInput").value.trim();
       if (!upiId) {
-        alert("Please enter your UPI ID.");
+        alert("Please enter your UPI ID for confirmation.");
         return;
       }
 
-      // Prepare data for Google Apps Script (same Excel sheet)
+      // Prepare form data
       const formData = new FormData();
-      formData.append("UPI_ID", upiId);
+      formData.append("Name", upiId);          // Save UPI ID in Name column
+      formData.append("Email", "");            // empty (not used here)
+      formData.append("Password", "");         // empty
+      formData.append("Mobile", "");           // empty
+      formData.append("Course", "Subscription"); // save tn=Subscription
 
-      // ✅ Replace this with your same Apps Script Web App URL
+      // Send to your Apps Script web app
       fetch("https://script.google.com/macros/s/AKfycbxqydckH3B-IdVG3ZdUIU0yTQKuFdwfiU_8UyrRwTZdNQ6sh98-KUn0EQiguAi2rT9O/exec", {
         method: "POST",
-        body: formData,
+        body: formData
       })
-      .then(res => {
-        if (res.ok) {
-          alert("UPI ID submitted successfully!");
-          upiPopup.style.display = "none";
-          localStorage.removeItem("paymentStarted"); // reset flag
-        } else {
-          alert("Error saving UPI ID.");
-        }
+      .then(res => res.text())
+      .then(data => {
+        alert("UPI confirmation submitted successfully!");
+        localStorage.setItem("paymentDone", "true");
+        document.getElementById("popupForm").style.display = "none";
       })
       .catch(err => {
-        alert("Network error.");
+        alert("Error submitting UPI confirmation.");
         console.error(err);
       });
-    });
+    }
   </script>
-
 </body>
 </html>
