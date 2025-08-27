@@ -3,58 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pencil Sketch → CAD Plan</title>
+<title>Concrete Quantity Calculator</title>
 <style>
-  body { font-family: Arial; text-align: center; margin: 20px; }
+  body { font-family: Arial; text-align: center; padding: 20px; }
   canvas { border: 1px solid #ccc; margin-top: 10px; }
+  input, button { padding: 8px; margin: 5px; font-size: 16px; }
 </style>
 </head>
 <body>
-<h2>Pencil Sketch to Digital Plan</h2>
-<input type="file" id="upload" accept="image/*">
-<br><br>
-<canvas id="inputCanvas" width="600" height="400"></canvas>
-<canvas id="outputCanvas" width="600" height="400"></canvas>
+<h2>Concrete Quantity Calculator from CAD PDF</h2>
 
-<script async src="https://docs.opencv.org/4.x/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"></script>
+<input type="file" id="pdfUpload" accept="application/pdf"><br>
+<label>Enter slab/beam depth (m): </label>
+<input type="number" id="depthInput" step="0.01" value="0.15"><br>
+<button id="calculateBtn">Calculate Concrete Volume</button>
+
+<canvas id="pdfCanvas" width="600" height="400"></canvas>
+<h3 id="result"></h3>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
-function onOpenCvReady() {
-  document.getElementById('upload').addEventListener('change', (e) => {
-    let file = e.target.files[0];
-    if (!file) return;
-    let img = new Image();
-    img.onload = function() {
-      let inputCanvas = document.getElementById('inputCanvas');
-      let outputCanvas = document.getElementById('outputCanvas');
-      inputCanvas.width = img.width;
-      inputCanvas.height = img.height;
-      outputCanvas.width = img.width;
-      outputCanvas.height = img.height;
+let pdfDoc = null;
+let pageNum = 1;
+let scale = 1.5;
+let canvas = document.getElementById('pdfCanvas');
+let ctx = canvas.getContext('2d');
+let rectangles = []; // Store demo slab areas
 
-      let ctx = inputCanvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+document.getElementById('pdfUpload').addEventListener('change', async (e) => {
+  let file = e.target.files[0];
+  if (!file) return;
+  let fileReader = new FileReader();
+  fileReader.onload = async function() {
+    let typedarray = new Uint8Array(this.result);
+    pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
+    renderPage(pageNum);
+  };
+  fileReader.readAsArrayBuffer(file);
+});
 
-      // Convert to OpenCV Mat
-      let src = cv.imread(inputCanvas);
-      let dst = new cv.Mat();
-      cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-      cv.GaussianBlur(src, src, new cv.Size(3,3), 0, 0, cv.BORDER_DEFAULT);
-      cv.Canny(src, dst, 50, 150);
+async function renderPage(num) {
+  let page = await pdfDoc.getPage(num);
+  let viewport = page.getViewport({ scale: scale });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  let renderContext = {
+    canvasContext: ctx,
+    viewport: viewport
+  };
+  await page.render(renderContext).promise;
 
-      // Convert edges to image
-      cv.imshow(outputCanvas, dst);
-
-      src.delete(); dst.delete();
-    }
-    img.src = URL.createObjectURL(file);
-  });
+  // Demo: draw rectangles representing slabs/beams
+  rectangles = [
+    {x:50, y:50, w:200, h:150},
+    {x:300, y:100, w:200, h:100}
+  ];
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 2;
+  rectangles.forEach(r => ctx.strokeRect(r.x, r.y, r.w, r.h));
 }
-</script>
-  
+
+document.getElementById('calculateBtn').addEventListener('click', () => {
+  let depth = parseFloat(document.getElementById('depthInput').value);
+  if (!depth) { alert("Enter valid depth"); return; }
+
+  let totalAreaPx = rectangles.reduce((sum, r) => sum + r.w * r.h, 0);
+
+  // For demo, assume 1 px² = 0.0001 m²
+  let totalAreaM2 = totalAreaPx * 0.0001;
+  let volume = totalAreaM2 * depth;
+
+  document.getElementById('result').innerHTML =
+    `Total slab/beam area: ${totalAreaM2.toFixed(2)} m²<br>
+     Concrete volume: ${volume.toFixed(2)} m³`;
+});
+
   // ✅ When this page opens, mark user as subscribed
   localStorage.setItem("subscribed", "true");
   console.log("User subscription status saved.");
-</script>
+
   
+</script>
 </body>
 </html>
