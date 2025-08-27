@@ -3,155 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digital Plane Table - Distance Only</title>
+<title>Free Live Walking Distance Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f0f2f5;
-    padding: 20px;
-    max-width: 600px;
-    margin: auto;
-}
-h2 {
-    text-align: center;
-    color: #333;
-}
+body { font-family: Arial, sans-serif; max-width: 800px; margin:auto; padding:20px; background:#f0f2f5; }
+h2 { text-align:center; color:#333; }
 button {
-    padding: 12px 20px;
-    font-size: 16px;
-    margin: 10px 5px 20px 0;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background-color: #007BFF;
-    color: white;
-    transition: 0.3s;
+  padding:12px 20px; margin:10px 5px 20px 0; font-size:16px;
+  border:none; border-radius:6px; cursor:pointer; background:#007BFF; color:white; transition:0.3s;
 }
-button:hover { background-color: #0056b3; }
-#points {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-#points ul {
-    list-style: none;
-    padding-left: 0;
-}
-#points li {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-#error {
-    color: red;
-    font-weight: bold;
-    margin-top: 10px;
-}
+button:hover { background:#0056b3; }
+#map { width: 100%; height: 500px; border-radius:8px; }
+#info { background:white; padding:15px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
 
-<h2>Digital Plane Table (Distance Only)</h2>
-<button id="markBtn">Mark Current Point</button>
-<button id="exportBtn">Export CSV</button>
-<div id="points">
-    <h3>Marked Points:</h3>
-    <ul id="pointList"></ul>
+<h2>Live Walking Distance Tracker (Free)</h2>
+<button id="startBtn">Start Walking</button>
+<button id="stopBtn" disabled>Stop</button>
+<div id="info">
+  <p><strong>Distance:</strong> <span id="distance">0</span> meters / <span id="distanceFeet">0</span></p>
 </div>
-<div id="error"></div>
+<div id="map"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Store points
-let points = [];
+// Initialize map
+let map = L.map('map').fitWorld();
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+}).addTo(map);
 
-// Haversine formula to calculate distance in meters
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth radius in meters
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
+let path = [];
+let polyline = L.polyline([], {color:'red'}).addTo(map);
+let watchID;
+let totalDistance = 0;
 
-    const a = Math.sin(Δφ/2)**2 +
-              Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // meters
-}
-
-// Convert meters to feet and inches
-function metersToFeetInches(meters) {
-    const totalInches = meters * 39.3701;
-    const feet = Math.floor(totalInches / 12);
-    const inches = (totalInches % 12).toFixed(2);
+// Convert meters to feet/inches
+function metersToFeetInches(meters){
+    const totalInches = meters*39.3701;
+    const feet = Math.floor(totalInches/12);
+    const inches = (totalInches%12).toFixed(2);
     return `${feet}' ${inches}"`;
 }
 
-// Update point list
-function updatePointList() {
-    const ul = document.getElementById('pointList');
-    ul.innerHTML = "";
-    points.forEach((p,index) => {
-        let distanceMeters = 0;
-        let distanceFeet = "";
-        if(index > 0) {
-            const prev = points[index-1];
-            distanceMeters = getDistance(prev.lat, prev.lon, p.lat, p.lon);
-            distanceFeet = metersToFeetInches(distanceMeters);
-        }
-        ul.innerHTML += `<li>
-            <strong>Point ${index+1}:</strong> (${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}) 
-            ${distanceMeters ? `- Distance: ${distanceMeters.toFixed(2)} m / ${distanceFeet}` : ""}
-        </li>`;
-    });
+// Haversine distance
+function getDistance(lat1, lon1, lat2, lon2){
+    const R = 6371e3; // meters
+    const φ1 = lat1*Math.PI/180;
+    const φ2 = lat2*Math.PI/180;
+    const Δφ = (lat2-lat1)*Math.PI/180;
+    const Δλ = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R*c;
 }
 
-// Mark current GPS point
-document.getElementById('markBtn').addEventListener('click', () => {
-    const errorDiv = document.getElementById('error');
-    errorDiv.innerText = "";
-    if(navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            points.push({lat: pos.coords.latitude, lon: pos.coords.longitude});
-            updatePointList();
-        }, err => {
-            let msg = "";
-            switch(err.code) {
-                case err.PERMISSION_DENIED: msg="Location permission denied."; break;
-                case err.POSITION_UNAVAILABLE: msg="Location unavailable."; break;
-                case err.TIMEOUT: msg="Location request timed out."; break;
-                default: msg="Unknown error."; break;
-            }
-            msg += " (Open via HTTPS or GitHub Pages, not local file)";
-            errorDiv.innerText = msg;
+// Update info
+function updateInfo() {
+    document.getElementById('distance').innerText = totalDistance.toFixed(2);
+    document.getElementById('distanceFeet').innerText = metersToFeetInches(totalDistance);
+}
+
+// Start walking
+document.getElementById('startBtn').addEventListener('click', ()=>{
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>{
+            const {latitude, longitude} = pos.coords;
+            map.setView([latitude, longitude], 18);
+            path.push([latitude, longitude]);
+            polyline.setLatLngs(path);
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+
+            watchID = navigator.geolocation.watchPosition(position=>{
+                const newPoint = [position.coords.latitude, position.coords.longitude];
+                const lastPoint = path[path.length-1];
+                const distance = getDistance(lastPoint[0], lastPoint[1], newPoint[0], newPoint[1]);
+                totalDistance += distance;
+                path.push(newPoint);
+                polyline.setLatLngs(path);
+                map.panTo(newPoint);
+                updateInfo();
+            }, err=>{
+                alert("Error getting location: " + err.message);
+            }, {enableHighAccuracy:true, maximumAge:0, timeout:5000});
+
+        }, err=>{
+            alert("Error getting location: " + err.message);
         }, {enableHighAccuracy:true});
     } else {
-        errorDiv.innerText = "Geolocation not supported by this browser.";
+        alert("Geolocation not supported.");
     }
 });
 
-// Export points to CSV
-document.getElementById('exportBtn').addEventListener('click', () => {
-    if(points.length === 0) return alert("No points to export!");
-    let csv = "Point,Latitude,Longitude,Distance_m,Distance_ft_in\n";
-    points.forEach((p,i)=>{
-        let dMeters=0, dFeet="";
-        if(i>0){
-            const prev = points[i-1];
-            dMeters = getDistance(prev.lat, prev.lon, p.lat, p.lon);
-            dFeet = metersToFeetInches(dMeters);
-        }
-        csv += `${i+1},${p.lat},${p.lon},${dMeters.toFixed(2)},${dFeet}\n`;
-    });
-    const blob = new Blob([csv], {type: "text/csv"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "points.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+// Stop walking
+document.getElementById('stopBtn').addEventListener('click', ()=>{
+    if(watchID) navigator.geolocation.clearWatch(watchID);
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
 });
 </script>
 
 </body>
 </html>
-
