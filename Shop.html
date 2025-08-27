@@ -3,59 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DWG Concrete Calculator</title>
-<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.0.3/dist/dxf-parser.min.js"></script>
+<title>IS Code Search Tool</title>
+<style>
+body { font-family: Arial; padding: 20px; max-width: 800px; margin:auto; }
+input, button { padding: 8px; margin: 5px 0; font-size: 16px; width: 100%; }
+#results { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; white-space: pre-wrap; }
+</style>
 </head>
 <body>
-<h2>Concrete Quantity Calculator (DWG/DXF)</h2>
-<input type="file" id="fileInput" accept=".dxf,.dwg"><br><br>
-<label>Slab/Beam Depth (m): </label>
-<input type="number" id="depth" step="0.01" value="0.15"><br><br>
-<button id="calculateBtn">Calculate Concrete Volume</button>
 
-<h3 id="result"></h3>
+<h2>IS Code Search Tool</h2>
+
+<label>Search Keyword or Clause:</label>
+<input type="text" id="searchInput" placeholder="e.g., slab reinforcement, IS 456:26.2.1">
+
+<button id="searchBtn">Search</button>
+
+<div id="results">Search results will appear here...</div>
 
 <script>
-function calculatePolygonArea(points) {
-    let sum = 0;
-    for (let i=0;i<points.length;i++){
-        let j = (i+1) % points.length;
-        sum += points[i].x*points[j].y - points[j].x*points[i].y;
+// Example IS code database (simplified)
+const IS_CODES = [
+    { code: "IS 456:26.2.1", text: "Minimum reinforcement for slabs: 0.15% of cross-section area." },
+    { code: "IS 456:26.2.2", text: "Maximum spacing of main bars in slabs should not exceed 3 times slab thickness." },
+    { code: "IS 456:39.1.1", text: "Shear reinforcement in beams should be provided as per clause 39." },
+    { code: "IS 1893:4.2", text: "Seismic lateral forces to be considered as per building importance factor." },
+    { code: "IS 875:5.1", text: "Live load on floors and roofs should be considered as per IS 875 Part 2." }
+];
+
+// Search function
+document.getElementById('searchBtn').addEventListener('click', () => {
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    if(!query){ alert("Enter a keyword or clause to search"); return; }
+
+    const results = IS_CODES.filter(item => 
+        item.code.toLowerCase().includes(query) || item.text.toLowerCase().includes(query)
+    );
+
+    if(results.length === 0){
+        document.getElementById('results').textContent = "No matching IS clauses found.";
+    } else {
+        document.getElementById('results').innerHTML = results.map(r => `${r.code} : ${r.text}`).join("\n\n");
     }
-    return Math.abs(sum)/2;
-}
-
-document.getElementById('calculateBtn').addEventListener('click', () => {
-    let file = document.getElementById('fileInput').files[0];
-    let depth = parseFloat(document.getElementById('depth').value);
-    if(!file || !depth){ alert("Select DXF/DWG file & enter depth"); return; }
-
-    let reader = new FileReader();
-    reader.onload = function(e){
-        try {
-            let parser = new window.DxfParser();
-            let dxf = parser.parseSync(e.target.result);
-            let totalArea = 0;
-
-            dxf.entities.forEach(ent => {
-                if(ent.type === 'LWPOLYLINE' && ent.closed){
-                    let points = ent.vertices.map(v => ({x:v.x, y:v.y}));
-                    totalArea += calculatePolygonArea(points);
-                }
-            });
-
-            let volume = totalArea * depth;
-            document.getElementById('result').innerHTML =
-                `Total slab/beam area: ${totalArea.toFixed(2)} units²<br>
-                 Concrete volume: ${volume.toFixed(2)} m³`;
-
-        } catch(err){
-            alert("Error parsing DXF/DWG: " + err);
-        }
-    };
-    reader.readAsText(file);
 });
-
+</script>
 
   // ✅ When this page opens, mark user as subscribed
   localStorage.setItem("subscribed", "true");
