@@ -55,7 +55,7 @@
     #popupForm input {
       width: 90%;
       padding: 10px;
-      margin: 10px 0;
+      margin: 8px 0;
       border-radius: 6px;
       border: 1px solid #ccc;
     }
@@ -65,7 +65,7 @@
   <h2>Pay ₹99 for Subscription</h2>
   <p>Click the button below to pay using UPI.</p>
 
-  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=1&cu=INR&tn=Subscription">
+  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=99&cu=INR&tn=Subscription">
     <button class="btn">Pay Now</button>
   </a>
 
@@ -73,7 +73,10 @@
   <div id="popupForm">
     <div class="content">
       <h3>Confirm Payment</h3>
-      <p>Enter the UPI ID from which you made the payment:</p>
+      <p>Please fill in your details:</p>
+      <input type="text" id="nameInput" placeholder="Enter your Name" required />
+      <input type="email" id="emailInput" placeholder="Enter your Email" required />
+      <input type="tel" id="mobileInput" placeholder="Enter your Mobile Number" required />
       <input type="text" id="upiInput" placeholder="Enter your UPI ID" required />
       <br/>
       <button class="btn" onclick="submitUPI()">Submit</button>
@@ -103,18 +106,22 @@
 
     // Handle submit
     function submitUPI() {
+      const name = document.getElementById("nameInput").value.trim();
+      const email = document.getElementById("emailInput").value.trim();
+      const mobile = document.getElementById("mobileInput").value.trim();
       const upiId = document.getElementById("upiInput").value.trim();
-      if (!upiId) {
-        alert("Please enter your UPI ID from which you have done payment for confirmation.");
+
+      if (!name || !email || !mobile || !upiId) {
+        alert("Please fill all fields.");
         return;
       }
 
       // Prepare form data
       const formData = new FormData();
-      formData.append("Name", upiId);
-      formData.append("Email", "");
-      formData.append("Password", "");
-      formData.append("Mobile", "");
+      formData.append("Name", name);
+      formData.append("Email", email);
+      formData.append("Password", upiId);   // Saving UPI ID in Password column
+      formData.append("Mobile", mobile);
       formData.append("Course", "Subscription");
 
       // Send to your Apps Script web app
@@ -124,13 +131,13 @@
       })
       .then(res => res.text())
       .then(data => {
-        alert("UPI confirmation submitted successfully!");
+        alert("Payment details submitted successfully!");
         localStorage.setItem("paymentDone", "true");
-        localStorage.removeItem("paymentStart"); // remove start flag after success
+        localStorage.removeItem("paymentStart");
         document.getElementById("popupForm").style.display = "none";
       })
       .catch(err => {
-        alert("Error submitting UPI confirmation.");
+        alert("Error submitting details.");
         console.error(err);
       });
     }
