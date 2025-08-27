@@ -3,50 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IS Code Search Tool</title>
+<title>Digital Plane Table</title>
 <style>
-body { font-family: Arial; padding: 20px; max-width: 800px; margin:auto; }
-input, button { padding: 8px; margin: 5px 0; font-size: 16px; width: 100%; }
-#results { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; white-space: pre-wrap; }
+body { font-family: Arial; padding: 20px; max-width: 600px; margin:auto; }
+button { padding: 10px 15px; font-size: 16px; margin: 5px 0; }
+#points { margin-top: 20px; }
+#map { width: 100%; height: 300px; margin-top: 20px; border:1px solid #ccc; }
 </style>
 </head>
 <body>
 
-<h2>IS Code Search Tool</h2>
-
-<label>Search Keyword or Clause:</label>
-<input type="text" id="searchInput" placeholder="e.g., slab reinforcement, IS 456:26.2.1">
-
-<button id="searchBtn">Search</button>
-
-<div id="results">Search results will appear here...</div>
+<h2>Digital Plane Table (GPS)</h2>
+<button id="markBtn">Mark Current Point</button>
+<div id="points">
+  <h3>Marked Points:</h3>
+  <ul id="pointList"></ul>
+</div>
+<div id="map"></div>
 
 <script>
-// Example IS code database (simplified)
-const IS_CODES = [
-    { code: "IS 456:26.2.1", text: "Minimum reinforcement for slabs: 0.15% of cross-section area." },
-    { code: "IS 456:26.2.2", text: "Maximum spacing of main bars in slabs should not exceed 3 times slab thickness." },
-    { code: "IS 456:39.1.1", text: "Shear reinforcement in beams should be provided as per clause 39." },
-    { code: "IS 1893:4.2", text: "Seismic lateral forces to be considered as per building importance factor." },
-    { code: "IS 875:5.1", text: "Live load on floors and roofs should be considered as per IS 875 Part 2." }
-];
+// Array to store points
+let points = [];
 
-// Search function
-document.getElementById('searchBtn').addEventListener('click', () => {
-    const query = document.getElementById('searchInput').value.toLowerCase().trim();
-    if(!query){ alert("Enter a keyword or clause to search"); return; }
+// Haversine formula to calculate distance in meters
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
 
-    const results = IS_CODES.filter(item => 
-        item.code.toLowerCase().includes(query) || item.text.toLowerCase().includes(query)
-    );
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c;
+    return d; // in meters
+}
 
-    if(results.length === 0){
-        document.getElementById('results').textContent = "No matching IS clauses found.";
+// Update the point list
+function updatePointList() {
+    const ul = document.getElementById('pointList');
+    ul.innerHTML = "";
+    points.forEach((p, index) => {
+        let distance = 0;
+        if(index > 0) {
+            const prev = points[index-1];
+            distance = getDistance(prev.lat, prev.lon, p.lat, p.lon).toFixed(2);
+        }
+        ul.innerHTML += `<li>Point ${index+1}: (${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}) ${distance ? " - Distance from previous: " + distance + " m" : ""}</li>`;
+    });
+}
+
+// Mark current GPS point
+document.getElementById('markBtn').addEventListener('click', () => {
+    if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            points.push({lat: position.coords.latitude, lon: position.coords.longitude});
+            updatePointList();
+        }, error => {
+            alert("Error getting location: " + error.message);
+        }, {enableHighAccuracy: true});
     } else {
-        document.getElementById('results').innerHTML = results.map(r => `${r.code} : ${r.text}`).join("\n\n");
+        alert("Geolocation is not supported by this browser.");
     }
 });
 </script>
+
 
   // ✅ When this page opens, mark user as subscribed
   localStorage.setItem("subscribed", "true");
