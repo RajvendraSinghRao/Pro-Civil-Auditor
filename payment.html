@@ -65,7 +65,7 @@
   <h2>Pay ₹99 for Subscription</h2>
   <p>Click the button below to pay using UPI.</p>
 
-  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=99&cu=INR&tn=Subscription">
+  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=1&cu=INR&tn=Subscription">
     <button class="btn">Pay Now</button>
   </a>
 
@@ -105,7 +105,7 @@
     function submitUPI() {
       const upiId = document.getElementById("upiInput").value.trim();
       if (!upiId) {
-        alert("Please enter your UPI ID for confirmation.");
+        alert("Please enter your UPI ID from which you have done payment for confirmation.");
         return;
       }
 
