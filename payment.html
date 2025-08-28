@@ -34,6 +34,10 @@
       background: #f0f0f0;
     }
 
+    .plan {
+      margin: 15px 0;
+    }
+
     /* Popup form */
     #popupForm {
       display: none;
@@ -62,18 +66,33 @@
   </style>
 </head>
 <body>
-  <h2>Pay ₹99 for Subscription</h2>
-  <p>Click the button below to pay using UPI.</p>
+  <h2>Choose Your Subscription Plan</h2>
 
-  <a id="payBtn" href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=99&cu=INR&tn=Subscription">
-    <button class="btn">Pay Now</button>
-  </a>
+  <div class="plan">
+    <p><strong>Monthly Subscription</strong> – ₹100</p>
+    <a class="payBtn" 
+       href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=100&cu=INR&tn=Monthly+Subscription" 
+       data-plan="Monthly Subscription" 
+       data-amount="100">
+      <button class="btn">Pay ₹100</button>
+    </a>
+  </div>
+
+  <div class="plan">
+    <p><strong>Three Months Subscription</strong> – ₹61</p>
+    <a class="payBtn" 
+       href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=61&cu=INR&tn=3+Months+Subscription" 
+       data-plan="3 Months Subscription" 
+       data-amount="261">
+      <button class="btn">Pay ₹61</button>
+    </a>
+  </div>
 
   <!-- Popup Form -->
   <div id="popupForm">
     <div class="content">
       <h3>Confirm Payment</h3>
-      <p>Please fill in your detail and Enter same UPI ID from which you have done payment:</p>
+      <p>Please fill in your details and enter the same UPI ID from which you have made payment:</p>
       <input type="text" id="nameInput" placeholder="Enter your Name" required />
       <input type="email" id="emailInput" placeholder="Enter your Email" required />
       <input type="tel" id="mobileInput" placeholder="Enter your Mobile Number" required />
@@ -84,18 +103,27 @@
   </div>
 
   <script>
-    // Clear all flags on refresh (new page load)
+    let selectedPlan = "";
+    let selectedAmount = "";
+
+    // Clear all flags on refresh
     window.addEventListener("load", function() {
       localStorage.removeItem("paymentStart");
       localStorage.removeItem("paymentDone");
     });
 
-    // When Pay Now is clicked, mark payment started
-    document.getElementById("payBtn").addEventListener("click", function() {
-      localStorage.setItem("paymentStart", "true");
+    // When a Pay button is clicked
+    document.querySelectorAll(".payBtn").forEach(btn => {
+      btn.addEventListener("click", function() {
+        selectedPlan = this.getAttribute("data-plan");
+        selectedAmount = this.getAttribute("data-amount");
+        localStorage.setItem("paymentStart", "true");
+        localStorage.setItem("plan", selectedPlan);
+        localStorage.setItem("amount", selectedAmount);
+      });
     });
 
-    // Detect when user comes back to page
+    // Detect when user comes back
     document.addEventListener("visibilitychange", function() {
       if (document.visibilityState === "visible") {
         if (localStorage.getItem("paymentStart") && !localStorage.getItem("paymentDone")) {
@@ -110,28 +138,28 @@
       const email = document.getElementById("emailInput").value.trim();
       const mobile = document.getElementById("mobileInput").value.trim();
       const upiId = document.getElementById("upiInput").value.trim();
+      const plan = localStorage.getItem("plan") || "Subscription";
+      const amount = localStorage.getItem("amount") || "0";
 
       if (!name || !email || !mobile || !upiId) {
         alert("Please fill all fields.");
         return;
       }
 
-      // Prepare form data
       const formData = new FormData();
       formData.append("Name", name);
       formData.append("Email", email);
-      formData.append("Password", upiId);   // Saving UPI ID in Password column
+      formData.append("Password", upiId);   
       formData.append("Mobile", mobile);
-      formData.append("Course", "Subscription");
+      formData.append("Course", plan + " - ₹" + amount);
 
-      // Send to your Apps Script web app
       fetch("https://script.google.com/macros/s/AKfycbxqydckH3B-IdVG3ZdUIU0yTQKuFdwfiU_8UyrRwTZdNQ6sh98-KUn0EQiguAi2rT9O/exec", {
         method: "POST",
         body: formData
       })
       .then(res => res.text())
       .then(data => {
-        alert("Payment details submitted successfully! In 24 Hours You will receive Access link on your Whatsapp and Gmail After opening that link you will get access of subscription which you have purchased || Warning The Access link is only valid for 24 hours after you receive it after 24 hours you cant open it and You will not get access to your supscription ||");
+        alert("Payment details submitted successfully! Within 24 hours you will receive your access link on WhatsApp and Gmail.\n\n⚠️ Note: The access link will only be valid for 24 hours.");
         localStorage.setItem("paymentDone", "true");
         localStorage.removeItem("paymentStart");
         document.getElementById("popupForm").style.display = "none";
