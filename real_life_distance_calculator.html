@@ -84,6 +84,9 @@ let currentRect = null;
 let realWidth = 0;
 const FOCAL_LENGTH = 700;
 
+// Optimized canvas size
+const MAX_WIDTH = 640;
+
 // Load image from gallery
 imageInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -95,10 +98,11 @@ imageInput.addEventListener('change', (e) => {
   reader.readAsDataURL(file);
 });
 
-// Draw image when loaded
 img.onload = function() {
-  canvas.width = img.width;
-  canvas.height = img.height;
+  // Scale image to MAX_WIDTH
+  const scale = Math.min(MAX_WIDTH / img.naturalWidth, 1);
+  canvas.width = img.naturalWidth * scale;
+  canvas.height = img.naturalHeight * scale;
   redraw();
   realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
   if (isNaN(realWidth) || realWidth <= 0) {
@@ -108,7 +112,7 @@ img.onload = function() {
   }
 }
 
-// Convert touch/mouse coordinates to canvas coordinates
+// Convert touch coordinates to canvas coordinates
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -124,7 +128,7 @@ function getPos(e) {
   return {x, y};
 }
 
-// Start drawing rectangle
+// Start drawing
 canvas.addEventListener('touchstart', (e) => {
   if (!img.src) return;
   const pos = getPos(e);
@@ -175,16 +179,16 @@ calculateBtn.addEventListener('click', () => {
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = 'red';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 5; // thicker rectangle
   rectangles.forEach(r => {
+    ctx.strokeStyle = 'red';
     ctx.strokeRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
     ctx.fillStyle = 'red';
     ctx.beginPath();
-    ctx.arc(r.x1, r.y1, 5, 0, 2*Math.PI);
+    ctx.arc(r.x1, r.y1, 6, 0, 2*Math.PI);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(r.x2, r.y2, 5, 0, 2*Math.PI);
+    ctx.arc(r.x2, r.y2, 6, 0, 2*Math.PI);
     ctx.fill();
   });
   if (currentRect) {
