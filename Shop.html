@@ -1,114 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Walk Distance Tracker</title>
-<style>
-body {
-  font-family: 'Segoe UI', sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  background: #f9f9f9;
-}
-h1 { color: #2c3e50; text-align: center; }
-button {
-  background-color: #2c3e50;
-  color: #fff;
-  border: none;
-  padding: 15px 25px;
-  margin: 10px;
-  border-radius: 5px;
-  font-size: 18px;
-  cursor: pointer;
-}
-button:hover { background-color: #34495e; }
-#info {
-  margin-top: 20px;
-  font-size: 20px;
-  font-weight: bold;
-  text-align: center;
-}
-</style>
-</head>
-<body>
-
-<h1>Walk Distance Tracker</h1>
-<button id="startBtn">Start Walk</button>
-<button id="endBtn" disabled>End Walk</button>
-
-<div id="info">Press "Start Walk" to begin.</div>
-
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 <script>
-let watchId = null;
-let path = []; // array of {lat, lon} points
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-const startBtn = document.getElementById('startBtn');
-const endBtn = document.getElementById('endBtn');
-const info = document.getElementById('info');
-
-// Haversine formula to calculate distance between two GPS points in meters
-function getDistance(lat1, lon1, lat2, lon2){
-  const R = 6371000; // Earth radius in meters
-  const rad = Math.PI / 180;
-  const dLat = (lat2 - lat1) * rad;
-  const dLon = (lon2 - lon1) * rad;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1*rad) * Math.cos(lat2*rad) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-// Start tracking
-startBtn.addEventListener('click', () => {
-  if(!navigator.geolocation){
-    info.innerText = "Geolocation not supported by your browser.";
-    return;
-  }
-
-  path = [];
-  endBtn.disabled = false;
-  startBtn.disabled = true;
-  info.innerText = "Walking... GPS tracking active.";
-
-  watchId = navigator.geolocation.watchPosition(pos => {
-    path.push({lat: pos.coords.latitude, lon: pos.coords.longitude});
-  }, err => {
-    info.innerText = "Error getting location: " + err.message;
-  }, {enableHighAccuracy:true, maximumAge:1000, timeout:5000});
+// Setup camera
+navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+  video.srcObject = stream;
 });
 
-// End tracking and calculate distance
-endBtn.addEventListener('click', () => {
-  if(watchId !== null){
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
+// Constants
+const REAL_WIDTH_CM = 10;
+const REAL_HEIGHT_CM = 10;
+const FOCAL_LENGTH = 700; // adjust after testing
+
+video.addEventListener('play', () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  function processFrame() {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // TODO: Use OpenCV.js to detect your shape or an ArUco marker
+    // Example: once detected bounding box = {x,y,w,h}
+
+    // Fake detection for demo (centered square 100px wide)
+    let x = canvas.width/2 - 50, y = canvas.height/2 - 50, w = 100, h = 100;
+
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+
+    // Calculate distance using width in pixels
+    let distanceCm = (REAL_WIDTH_CM * FOCAL_LENGTH) / w;
+    ctx.fillStyle = "yellow";
+    ctx.fillText(`Distance: ${distanceCm.toFixed(2)} cm`, x, y-10);
+
+    requestAnimationFrame(processFrame);
   }
-
-  if(path.length < 2){
-    info.innerText = "Not enough data to calculate distance.";
-    return;
-  }
-
-  // Sum distance between consecutive points
-  let totalDist = 0;
-  for(let i=1; i<path.length; i++){
-    totalDist += getDistance(path[i-1].lat, path[i-1].lon, path[i].lat, path[i].lon);
-  }
-
-  const distMeters = totalDist;
-  const distFeet = totalDist * 3.28084;
-  const distKm = totalDist / 1000;
-
-  info.innerText = `Distance walked:\n${distMeters.toFixed(2)} meters\n${distKm.toFixed(2)} km\n${distFeet.toFixed(2)} ft`;
-
-  startBtn.disabled = false;
-  endBtn.disabled = true;
+  processFrame();
 });
 </script>
-
-</body>
-</html>
