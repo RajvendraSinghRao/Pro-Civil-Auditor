@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Distance Measurement</title>
+<title>Distance Measurement - Front Camera</title>
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -17,11 +17,13 @@
   h1 {
     margin-bottom: 10px;
     color: #2c3e50;
+    text-align: center;
   }
   #videoContainer {
     position: relative;
-    width: 640px;
-    height: 480px;
+    width: 90%;
+    max-width: 640px;
+    aspect-ratio: 4/3;
     border: 2px solid #2c3e50;
     border-radius: 10px;
     overflow: hidden;
@@ -31,6 +33,7 @@
     width: 100%;
     height: 100%;
     display: block;
+    transform: scaleX(-1); /* Mirror for front camera */
   }
   #controls {
     margin-top: 15px;
@@ -40,7 +43,7 @@
     color: #fff;
     border: none;
     padding: 10px 20px;
-    margin: 0 5px;
+    margin: 5px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
@@ -52,15 +55,16 @@
     margin-top: 15px;
     font-size: 18px;
     font-weight: bold;
+    text-align: center;
   }
 </style>
 </head>
 <body>
 
-<h1>Distance Measurement</h1>
+<h1>Distance Measurement (Front Camera)</h1>
 
 <div id="videoContainer">
-  <video id="video" autoplay></video>
+  <video id="video" autoplay playsinline></video>
   <canvas id="canvas" style="display:none;"></canvas>
 </div>
 
@@ -79,18 +83,16 @@ const info = document.getElementById('info');
 const captureBtn = document.getElementById('captureBtn');
 const resetBtn = document.getElementById('resetBtn');
 
-// Rough focal length in pixels (can be calibrated for more accuracy)
+// Rough focal length in pixels (can be calibrated for accuracy)
 const FOCAL_LENGTH = 700;
 
-// Start webcam
-navigator.mediaDevices.getUserMedia({ video: true })
+// Start front camera
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
   .then(stream => video.srcObject = stream)
   .catch(err => alert('Error accessing webcam: ' + err));
 
-// Variables for drawing rectangle
 let startX, startY, isDrawing = false;
 
-// Capture image
 captureBtn.addEventListener('click', () => {
   canvas.style.display = 'block';
   canvas.width = video.videoWidth;
@@ -100,45 +102,47 @@ captureBtn.addEventListener('click', () => {
   captureBtn.style.display = 'none';
   resetBtn.style.display = 'inline-block';
 
-  // Ask for real object width
-  const realWidth = parseFloat(prompt("Enter real-world width of the object (cm):"));
+  const realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
   if (isNaN(realWidth) || realWidth <= 0) {
     info.innerText = "Invalid width entered. Reload page to try again.";
     return;
   }
   info.innerText = "Draw a rectangle around the object on the image.";
 
-  // Mouse events for drawing
-  canvas.onmousedown = (e) => {
+  // Touch events for mobile
+  canvas.addEventListener('touchstart', (e) => {
     const rect = canvas.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
+    const touch = e.touches[0];
+    startX = touch.clientX - rect.left;
+    startY = touch.clientY - rect.top;
     isDrawing = true;
-  };
+  });
 
-  canvas.onmousemove = (e) => {
+  canvas.addEventListener('touchmove', (e) => {
     if (!isDrawing) return;
     const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    const touch = e.touches[0];
+    const currentX = touch.clientX - rect.left;
+    const currentY = touch.clientY - rect.top;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 3;
     ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
-  };
+    e.preventDefault();
+  }, { passive: false });
 
-  canvas.onmouseup = (e) => {
+  canvas.addEventListener('touchend', (e) => {
     if (!isDrawing) return;
     const rect = canvas.getBoundingClientRect();
-    const endX = e.clientX - rect.left;
+    const touch = e.changedTouches[0];
+    const endX = touch.clientX - rect.left;
     const pixelWidth = Math.abs(endX - startX);
     const distance = (realWidth * FOCAL_LENGTH) / pixelWidth;
     info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
     isDrawing = false;
-  };
+  });
 });
 
-// Reset button
 resetBtn.addEventListener('click', () => {
   video.style.display = 'block';
   canvas.style.display = 'none';
@@ -150,3 +154,4 @@ resetBtn.addEventListener('click', () => {
 
 </body>
 </html>
+
