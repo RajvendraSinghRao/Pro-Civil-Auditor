@@ -40,6 +40,14 @@
   <button class="btn" onclick="getAccess()">Get Access</button>
 
   <script>
+
+    if (!localStorage.getItem("entryAllowed") || !localStorage.getItem("registeredUser")) {
+  alert("Access Denied. Please start from the Home Page.");
+  window.location.href = "index.html";
+}
+  
+
+    
     function getAccess() {
       // Set subscribed in localStorage
       localStorage.setItem("subscribed", "true");
