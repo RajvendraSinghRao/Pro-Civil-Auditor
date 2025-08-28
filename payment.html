@@ -160,7 +160,7 @@
       })
       .then(res => res.text())
       .then(data => {
-        alert("Payment details submitted successfully! Within 24 hours you will receive your access link on WhatsApp and Gmail.\n\n⚠️ Note: The access link will only be valid for 24 hours.");
+        alert("Payment details submitted successfully! Within 24 hours you will receive your access link on WhatsApp and Gmail.\n\n⚠️ Warning: The access link will only be valid for 24 hours after you received it open it in 24 to get access of your purchased subscription.");
         localStorage.setItem("paymentDone", "true");
         localStorage.removeItem("paymentStart");
         document.getElementById("popupForm").style.display = "none";
