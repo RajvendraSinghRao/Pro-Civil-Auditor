@@ -5,19 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Distance Measurement</title>
 <style>
-  body { font-family: Arial; text-align: center; background: #f0f0f0; }
-  video, canvas { border: 2px solid black; margin-top: 10px; }
-  #info { margin-top: 10px; font-size: 18px; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    margin-bottom: 10px;
+    color: #2c3e50;
+  }
+  #videoContainer {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    border: 2px solid #2c3e50;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+  }
+  video, canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #controls {
+    margin-top: 15px;
+  }
+  button {
+    background-color: #2c3e50;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  button:hover {
+    background-color: #34495e;
+  }
+  #info {
+    margin-top: 15px;
+    font-size: 18px;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
-<h2>Distance Measurement</h2>
 
-<video id="video" width="640" height="480" autoplay></video>
-<br>
-<button id="captureBtn">Capture Image</button>
-<canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
-<div id="info">Place your object in front of the camera and click Capture.</div>
+<h1>Distance Measurement</h1>
+
+<div id="videoContainer">
+  <video id="video" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+</div>
+
+<div id="controls">
+  <button id="captureBtn">Capture Object</button>
+  <button id="resetBtn" style="display:none;">Reset</button>
+</div>
+
+<div id="info">Place your object in front of the camera and click "Capture Object".</div>
 
 <script>
 const video = document.getElementById('video');
@@ -25,62 +77,76 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const info = document.getElementById('info');
 const captureBtn = document.getElementById('captureBtn');
+const resetBtn = document.getElementById('resetBtn');
 
-// Rough focal length in pixels (calibrate for your camera if needed)
+// Rough focal length in pixels (can be calibrated for more accuracy)
 const FOCAL_LENGTH = 700;
 
 // Start webcam
-navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-  video.srcObject = stream;
-});
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => video.srcObject = stream)
+  .catch(err => alert('Error accessing webcam: ' + err));
+
+// Variables for drawing rectangle
+let startX, startY, isDrawing = false;
 
 // Capture image
 captureBtn.addEventListener('click', () => {
   canvas.style.display = 'block';
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   video.style.display = 'none';
   captureBtn.style.display = 'none';
-  info.innerText = 'Enter real-world width of the object (cm):';
-  
+  resetBtn.style.display = 'inline-block';
+
   // Ask for real object width
-  const realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
-  
+  const realWidth = parseFloat(prompt("Enter real-world width of the object (cm):"));
   if (isNaN(realWidth) || realWidth <= 0) {
     info.innerText = "Invalid width entered. Reload page to try again.";
     return;
   }
-  
-  info.innerText = "Draw rectangle around the object on the image.";
-  
-  // Let user draw rectangle on canvas
-  let startX, startY, endX, endY, isDrawing = false;
-  
+  info.innerText = "Draw a rectangle around the object on the image.";
+
+  // Mouse events for drawing
   canvas.onmousedown = (e) => {
     const rect = canvas.getBoundingClientRect();
     startX = e.clientX - rect.left;
     startY = e.clientY - rect.top;
     isDrawing = true;
   };
-  
+
   canvas.onmousemove = (e) => {
     if (!isDrawing) return;
     const rect = canvas.getBoundingClientRect();
-    endX = e.clientX - rect.left;
-    endY = e.clientY - rect.top;
-    // Draw rectangle
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // redraw image
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(startX, startY, endX-startX, endY-startY);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
   };
-  
-  canvas.onmouseup = () => {
-    isDrawing = false;
+
+  canvas.onmouseup = (e) => {
+    if (!isDrawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const endX = e.clientX - rect.left;
     const pixelWidth = Math.abs(endX - startX);
     const distance = (realWidth * FOCAL_LENGTH) / pixelWidth;
     info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
+    isDrawing = false;
   };
 });
+
+// Reset button
+resetBtn.addEventListener('click', () => {
+  video.style.display = 'block';
+  canvas.style.display = 'none';
+  captureBtn.style.display = 'inline-block';
+  resetBtn.style.display = 'none';
+  info.innerText = "Place your object in front of the camera and click 'Capture Object'.";
+});
 </script>
+
 </body>
 </html>
