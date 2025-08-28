@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Distance Measurement - Front Camera</title>
+<title>Distance Measurement</title>
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -19,21 +19,19 @@
     color: #2c3e50;
     text-align: center;
   }
-  #videoContainer {
-    position: relative;
+  video {
     width: 90%;
     max-width: 640px;
-    aspect-ratio: 4/3;
+    border-radius: 10px;
+  }
+  canvas {
+    display: block;
+    margin-top: 15px;
+    width: 90%;
+    max-width: 640px;
     border: 2px solid #2c3e50;
     border-radius: 10px;
-    overflow: hidden;
-    background: #000;
-  }
-  video, canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    transform: scaleX(-1);
+    touch-action: none;
   }
   #controls {
     margin-top: 15px;
@@ -56,105 +54,100 @@
     font-size: 18px;
     font-weight: bold;
     text-align: center;
+    white-space: pre-line;
   }
 </style>
 </head>
 <body>
 
-<h1>Distance Measurement (Front Camera)</h1>
-
-<div id="videoContainer">
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>
-</div>
+<h1>Distance Measurement</h1>
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
 <div id="controls">
-  <button id="captureBtn">Capture Object</button>
+  <button id="captureBtn">Capture Image</button>
   <button id="resetBtn" style="display:none;">Reset</button>
 </div>
 
-<div id="info">Place your object in front of the camera and click "Capture Object".</div>
+<div id="info">Place your object in front of the camera and click "Capture Image".</div>
 
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const info = document.getElementById('info');
 const captureBtn = document.getElementById('captureBtn');
 const resetBtn = document.getElementById('resetBtn');
+const info = document.getElementById('info');
 
-const FOCAL_LENGTH = 700; // approximate
+const FOCAL_LENGTH = 700;
 let capturedImage = null;
-let points = []; // store top-left and bottom-right
+let points = [];
+let realWidth = 0;
 
 // Start front camera
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
   .then(stream => video.srcObject = stream)
-  .catch(err => alert('Error accessing webcam: ' + err));
+  .catch(err => alert("Error accessing camera: " + err));
 
 captureBtn.addEventListener('click', () => {
-  canvas.style.display = 'block';
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   capturedImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  video.style.display = 'none';
-  captureBtn.style.display = 'none';
-  resetBtn.style.display = 'inline-block';
-
-  const realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
+  realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
   if (isNaN(realWidth) || realWidth <= 0) {
-    info.innerText = "Invalid width entered. Reload page to try again.";
+    info.innerText = "Invalid width. Reload page to try again.";
     return;
   }
 
-  info.innerText = "Tap top-left corner and then bottom-right corner of the object.";
-
-  // Handle touch points
-  canvas.addEventListener('touchstart', function handleTouch(e) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    points.push({x, y});
-
-    if (points.length === 2) {
-      // Draw rectangle
-      ctx.putImageData(capturedImage, 0, 0);
-      ctx.strokeStyle = 'red';
-      ctx.lineWidth = 3;
-      const width = points[1].x - points[0].x;
-      const height = points[1].y - points[0].y;
-      ctx.strokeRect(points[0].x, points[0].y, width, height);
-
-      // Calculate distance
-      const pixelWidth = Math.abs(width);
-      const distanceCm = (realWidth * FOCAL_LENGTH) / pixelWidth;
-      const distanceMeters = distanceCm / 100;
-      const distanceFeet = distanceCm / 30.48;
-      info.innerText = `Distance:\n${distanceCm.toFixed(2)} cm | ${distanceMeters.toFixed(2)} m | ${distanceFeet.toFixed(2)} ft`;
-
-      // Remove listener so it doesn’t add more points
-      canvas.removeEventListener('touchstart', handleTouch);
-    }
-
-    e.preventDefault();
-  }, { passive: false });
+  info.innerText = "Tap top-left corner, then bottom-right corner to draw rectangle.";
+  resetBtn.style.display = "inline-block";
 });
 
-// Reset
+// Handle tap to draw rectangle
+canvas.addEventListener('touchstart', (e) => {
+  if (!capturedImage) return;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  
+  // Convert touch coordinates to canvas coordinates
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
+
+  points.push({x, y});
+
+  if (points.length === 2) {
+    // Draw rectangle on captured image
+    ctx.putImageData(capturedImage, 0, 0);
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    const width = points[1].x - points[0].x;
+    const height = points[1].y - points[0].y;
+    ctx.strokeRect(points[0].x, points[0].y, width, height);
+
+    // Calculate distance
+    const pixelWidth = Math.abs(width);
+    const distanceCm = (realWidth * FOCAL_LENGTH) / pixelWidth;
+    const distanceMeters = distanceCm / 100;
+    const distanceFeet = distanceCm / 30.48;
+    info.innerText = `Distance:\n${distanceCm.toFixed(2)} cm | ${distanceMeters.toFixed(2)} m | ${distanceFeet.toFixed(2)} ft`;
+
+    points = []; // reset for next selection
+  }
+
+  e.preventDefault();
+}, { passive: false });
+
 resetBtn.addEventListener('click', () => {
-  video.style.display = 'block';
-  canvas.style.display = 'none';
-  captureBtn.style.display = 'inline-block';
-  resetBtn.style.display = 'none';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  capturedImage = null;
   points = [];
-  info.innerText = "Place your object in front of the camera and click 'Capture Object'.";
+  info.innerText = "Place your object in front of the camera and click 'Capture Image'.";
+  resetBtn.style.display = "none";
 });
 </script>
-
 </body>
 </html>
