@@ -19,18 +19,24 @@
     color: #2c3e50;
     text-align: center;
   }
-  video {
-    width: 90%;
-    max-width: 640px;
-    border-radius: 10px;
+  input[type="file"] {
+    display: none;
+  }
+  label {
+    background-color: #2c3e50;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 10px;
   }
   canvas {
-    display: block;
-    margin-top: 15px;
-    width: 90%;
-    max-width: 640px;
     border: 2px solid #2c3e50;
     border-radius: 10px;
+    margin-top: 10px;
+    width: 90%;
+    max-width: 640px;
     touch-action: none;
   }
   #controls {
@@ -61,93 +67,118 @@
 <body>
 
 <h1>Distance Measurement</h1>
-<video id="video" autoplay playsinline></video>
+
+<label for="imageInput">Select Image from Gallery</label>
+<input type="file" id="imageInput" accept="image/*">
+
 <canvas id="canvas"></canvas>
 
 <div id="controls">
-  <button id="captureBtn">Capture Image</button>
-  <button id="resetBtn" style="display:none;">Reset</button>
+  <button id="undoBtn">Undo Last Point</button>
+  <button id="calculateBtn">Calculate Distance</button>
 </div>
 
-<div id="info">Place your object in front of the camera and click "Capture Image".</div>
+<div id="info">Select an image to start.</div>
 
 <script>
-const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const captureBtn = document.getElementById('captureBtn');
-const resetBtn = document.getElementById('resetBtn');
+const imageInput = document.getElementById('imageInput');
+const undoBtn = document.getElementById('undoBtn');
+const calculateBtn = document.getElementById('calculateBtn');
 const info = document.getElementById('info');
 
-const FOCAL_LENGTH = 700;
-let capturedImage = null;
+let img = new Image();
 let points = [];
 let realWidth = 0;
+const FOCAL_LENGTH = 700; // approximate
 
-// Start front camera
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-  .then(stream => video.srcObject = stream)
-  .catch(err => alert("Error accessing camera: " + err));
+// Load image from gallery
+imageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-captureBtn.addEventListener('click', () => {
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  capturedImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    img.src = event.target.result;
+  }
+  reader.readAsDataURL(file);
+});
 
+// Draw image when loaded
+img.onload = function() {
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  points = [];
+  info.innerText = "Tap top-left and bottom-right points to create rectangle.";
   realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
   if (isNaN(realWidth) || realWidth <= 0) {
     info.innerText = "Invalid width. Reload page to try again.";
-    return;
   }
+}
 
-  info.innerText = "Tap top-left corner, then bottom-right corner to draw rectangle.";
-  resetBtn.style.display = "inline-block";
-});
-
-// Handle tap to draw rectangle
+// Handle touch to select points
 canvas.addEventListener('touchstart', (e) => {
-  if (!capturedImage) return;
+  if (!img.src) return;
+
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
-  
-  // Convert touch coordinates to canvas coordinates
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
   const x = (touch.clientX - rect.left) * scaleX;
   const y = (touch.clientY - rect.top) * scaleY;
 
   points.push({x, y});
-
-  if (points.length === 2) {
-    // Draw rectangle on captured image
-    ctx.putImageData(capturedImage, 0, 0);
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 3;
-    const width = points[1].x - points[0].x;
-    const height = points[1].y - points[0].y;
-    ctx.strokeRect(points[0].x, points[0].y, width, height);
-
-    // Calculate distance
-    const pixelWidth = Math.abs(width);
-    const distanceCm = (realWidth * FOCAL_LENGTH) / pixelWidth;
-    const distanceMeters = distanceCm / 100;
-    const distanceFeet = distanceCm / 30.48;
-    info.innerText = `Distance:\n${distanceCm.toFixed(2)} cm | ${distanceMeters.toFixed(2)} m | ${distanceFeet.toFixed(2)} ft`;
-
-    points = []; // reset for next selection
-  }
+  redraw();
 
   e.preventDefault();
 }, { passive: false });
 
-resetBtn.addEventListener('click', () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  capturedImage = null;
-  points = [];
-  info.innerText = "Place your object in front of the camera and click 'Capture Image'.";
-  resetBtn.style.display = "none";
+// Undo last point
+undoBtn.addEventListener('click', () => {
+  if (points.length > 0) {
+    points.pop();
+    redraw();
+  }
 });
+
+// Calculate distance
+calculateBtn.addEventListener('click', () => {
+  if (points.length < 2 || !realWidth) {
+    info.innerText = "Select two points and enter object width first.";
+    return;
+  }
+  const widthPx = Math.abs(points[1].x - points[0].x);
+  const distanceCm = (realWidth * FOCAL_LENGTH) / widthPx;
+  const distanceMeters = distanceCm / 100;
+  const distanceFeet = distanceCm / 30.48;
+  info.innerText = `Distance:\n${distanceCm.toFixed(2)} cm | ${distanceMeters.toFixed(2)} m | ${distanceFeet.toFixed(2)} ft`;
+});
+
+// Redraw canvas with image, points, and rectangle
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  // Draw points as dots
+  ctx.fillStyle = 'red';
+  points.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, 2*Math.PI);
+    ctx.fill();
+  });
+
+  // Draw rectangle if two points
+  if (points.length === 2) {
+    const width = points[1].x - points[0].x;
+    const height = points[1].y - points[0].y;
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(points[0].x, points[0].y, width, height);
+  }
+}
 </script>
+
 </body>
 </html>
