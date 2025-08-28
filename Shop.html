@@ -1,45 +1,112 @@
-<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L Shape Distance Scanner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #2c3e50; }
+    video, canvas {
+      max-width: 90%;
+      border: 2px solid #2c3e50;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>L Shape Distance Scanner</h1>
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
+
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// Setup camera
-navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+const REAL_WIDTH_CM = 10;  
+const FOCAL_LENGTH = 700;  
+
+let templateMat;
+
+// Load template image
+let templateImg = new Image();
+templateImg.src = "lshape.jpg"; // make sure this file is in your repo
+templateImg.onload = function () {
+  let tCanvas = document.createElement("canvas");
+  tCanvas.width = templateImg.width;
+  tCanvas.height = templateImg.height;
+  let tCtx = tCanvas.getContext("2d");
+  tCtx.drawImage(templateImg, 0, 0);
+  let tSrc = cv.imread(tCanvas);
+  cv.cvtColor(tSrc, tSrc, cv.COLOR_RGBA2GRAY, 0);
+  templateMat = tSrc;
+};
+
+// ✅ Select back camera
+navigator.mediaDevices.enumerateDevices().then(devices => {
+  let videoDevice = devices.find(d => d.kind === "videoinput" && d.label.toLowerCase().includes("back"));
+  if (!videoDevice) {
+    videoDevice = devices.find(d => d.kind === "videoinput" && d.label.toLowerCase().includes("environment"));
+  }
+  let constraints = videoDevice 
+    ? { video: { deviceId: { exact: videoDevice.deviceId } } }
+    : { video: true };
+  
+  return navigator.mediaDevices.getUserMedia(constraints);
+}).then(stream => {
   video.srcObject = stream;
+}).catch(err => {
+  console.error("Camera error:", err);
 });
 
-// Constants
-const REAL_WIDTH_CM = 10;
-const REAL_HEIGHT_CM = 10;
-const FOCAL_LENGTH = 700; // adjust after testing
-
+// Process frames
 video.addEventListener('play', () => {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
+  let cap = new cv.VideoCapture(video);
+  let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+  let gray = new cv.Mat();
 
   function processFrame() {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    cap.read(src);
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-    // TODO: Use OpenCV.js to detect your shape or an ArUco marker
-    // Example: once detected bounding box = {x,y,w,h}
+    if (templateMat) {
+      let result = new cv.Mat();
+      let mask = new cv.Mat();
+      cv.matchTemplate(gray, templateMat, result, cv.TM_CCOEFF_NORMED, mask);
 
-    // Fake detection for demo (centered square 100px wide)
-    let x = canvas.width/2 - 50, y = canvas.height/2 - 50, w = 100, h = 100;
+      let minMax = cv.minMaxLoc(result, mask);
+      let maxPoint = minMax.maxLoc;
 
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y, w, h);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(maxPoint.x, maxPoint.y, templateMat.cols, templateMat.rows);
 
-    // Calculate distance using width in pixels
-    let distanceCm = (REAL_WIDTH_CM * FOCAL_LENGTH) / w;
-    ctx.fillStyle = "yellow";
-    ctx.fillText(`Distance: ${distanceCm.toFixed(2)} cm`, x, y-10);
+      let distanceCm = (REAL_WIDTH_CM * FOCAL_LENGTH) / templateMat.cols;
+      ctx.fillStyle = "yellow";
+      ctx.font = "20px Arial";
+      ctx.fillText(`Distance: ${distanceCm.toFixed(2)} cm`, maxPoint.x, maxPoint.y - 10);
+
+      result.delete(); mask.delete();
+    }
 
     requestAnimationFrame(processFrame);
   }
   processFrame();
 });
 </script>
+
+</body>
+</html>
