@@ -1,121 +1,276 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Distance Measurement</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f9f9f9; }
-  h2 { text-align: center; color: #333; }
-  .container { max-width: 500px; margin: auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  canvas { width: 100%; border: 1px solid #ccc; margin-top: 10px; }
-  button { margin: 5px 0; padding: 10px; width: 100%; border: none; border-radius: 5px; background: #007BFF; color: white; font-size: 16px; }
-  button:hover { background: #0056b3; }
-  .result { margin-top: 15px; font-weight: bold; text-align: center; color: #222; }
+  :root {
+    --brand: #2c3e50;
+    --brand-2: #34495e;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    color: #333;
+  }
+  h1 { color: var(--brand); text-align: center; margin: 8px 0 12px; }
+  input[type="file"] { display: none; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  label, button {
+    background-color: var(--brand);
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  button:hover, label:hover { background-color: var(--brand-2); }
+  canvas {
+    border: 2px solid var(--brand);
+    border-radius: 12px;
+    margin-top: 10px;
+    width: min(92vw, 640px);     /* CSS display size */
+    max-width: 640px;
+    touch-action: none;           /* prevent pinch/scroll while drawing */
+    background:#fff;
+  }
+  #info {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    white-space: pre-line;
+  }
+  .tiny { font-size:12px; color:#666; margin-top:6px; }
+  .pill {
+    background:#eef3f8; color:#1f2d3a; padding:6px 10px; border-radius:999px; font-size:12px;
+  }
+  #numbers { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-top:8px;}
 </style>
 </head>
 <body>
-<div class="container">
-  <h2>Distance Measurement</h2>
-  
-  <h3>Step 1: Calibration</h3>
-  <input type="file" accept="image/*" id="calibrationImage" capture="environment"><br>
-  <canvas id="calibrationCanvas"></canvas>
-  <label>Known object width (cm):</label>
-  <input type="number" id="realWidth" value="8.56" step="0.01"><br>
-  <label>Known distance from camera (cm):</label>
-  <input type="number" id="knownDistance" value="50" step="0.1"><br>
-  <button onclick="calibrate()">Calibrate</button>
-  
-  <h3>Step 2: Measurement</h3>
-  <input type="file" accept="image/*" id="measureImage" capture="environment"><br>
-  <canvas id="measureCanvas"></canvas>
-  <button onclick="calculateDistance()">Calculate Distance</button>
-  
-  <div class="result" id="result"></div>
-</div>
+
+  <h1>Distance Measurement</h1>
+
+  <div class="row">
+    <label for="imageInput">Select Image from Gallery</label>
+    <button id="calibrateBtn" title="Compute focal length using a known distance">Calibrate</button>
+    <button id="undoBtn">Undo Rectangle</button>
+    <button id="clearBtn">Clear All</button>
+    <button id="calculateBtn">Calculate Distance</button>
+  </div>
+
+  <input type="file" id="imageInput" accept="image/*">
+
+  <canvas id="canvas"></canvas>
+
+  <div id="numbers"></div>
+  <div id="info">Select an image to start.</div>
+  <div class="tiny">Tip: draw a tight rectangle around the object width you know.</div>
 
 <script>
-let focalLength = localStorage.getItem("focalLength") ? parseFloat(localStorage.getItem("focalLength")) : null;
-let startX, startY, endX, endY;
-let currentCanvas, ctx, imgObj;
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const imageInput = document.getElementById('imageInput');
+const undoBtn = document.getElementById('undoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const calculateBtn = document.getElementById('calculateBtn');
+const calibrateBtn = document.getElementById('calibrateBtn');
+const info = document.getElementById('info');
+const numbers = document.getElementById('numbers');
 
-function setupCanvas(inputId, canvasId) {
-  const input = document.getElementById(inputId);
-  const canvas = document.getElementById(canvasId);
-  ctx = canvas.getContext("2d");
+let img = new Image();
+let rectangles = [];
+let currentRect = null;
 
-  input.onchange = e => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = ev => {
-      imgObj = new Image();
-      imgObj.onload = () => {
-        canvas.width = imgObj.width;
-        canvas.height = imgObj.height;
-        ctx.drawImage(imgObj, 0, 0);
-      };
-      imgObj.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
+let realWidthCm = 0;     // user-entered real-world width (cm)
+let focalLengthPx = 700; // effective focal length in "pixel" units (can be calibrated)
+let imgScale = 1;        // canvas displayed scale relative to original image pixels
+let cssWidth = 0, cssHeight = 0; // canvas CSS size (for clarity only)
 
-  canvas.onmousedown = e => {
-    const rect = canvas.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
-  };
-  canvas.onmouseup = e => {
-    const rect = canvas.getBoundingClientRect();
-    endX = e.clientX - rect.left;
-    endY = e.clientY - rect.top;
+const MAX_DISPLAY_WIDTH = 640;
 
-    ctx.drawImage(imgObj, 0, 0);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "red";
-    ctx.strokeRect(startX, startY, endX - startX, endY - startY);
-  };
+// --------- Helpers ----------
+function setCanvasSizeForImage() {
+  // Scale image to MAX_DISPLAY_WIDTH (CSS)
+  imgScale = Math.min(MAX_DISPLAY_WIDTH / img.naturalWidth, 1);
+
+  // CSS size
+  cssWidth = Math.round(img.naturalWidth * imgScale);
+  cssHeight = Math.round(img.naturalHeight * imgScale);
+
+  // Backing store size (for sharpness on HiDPI)
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  canvas.style.width = cssWidth + 'px';
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixel coordinates
 }
 
-setupCanvas("calibrationImage", "calibrationCanvas");
-setupCanvas("measureImage", "measureCanvas");
+function redraw() {
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  if (img.src) ctx.drawImage(img, 0, 0, cssWidth, cssHeight);
 
-function calibrate() {
-  const pixelWidth = Math.abs(endX - startX);
-  const realWidth = parseFloat(document.getElementById("realWidth").value);
-  const knownDistance = parseFloat(document.getElementById("knownDistance").value);
+  ctx.lineWidth = 4;
+  rectangles.forEach(r => {
+    ctx.strokeStyle = 'red';
+    ctx.strokeRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
+    ctx.fillStyle = 'red';
+    ctx.beginPath(); ctx.arc(r.x1, r.y1, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r.x2, r.y2, 5, 0, Math.PI*2); ctx.fill();
+  });
 
-  if (pixelWidth <= 0 || realWidth <= 0 || knownDistance <= 0) {
-    alert("Please draw rectangle and enter valid numbers.");
+  if (currentRect) {
+    ctx.strokeStyle = 'blue';
+    ctx.strokeRect(currentRect.x1, currentRect.y1, currentRect.x2 - currentRect.x1, currentRect.y2 - currentRect.y1);
+  }
+}
+
+function getCanvasPos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (('touches' in evt) ? evt.touches[0].clientX : evt.clientX) - rect.left;
+  const y = (('touches' in evt) ? evt.touches[0].clientY : evt.clientY) - rect.top;
+  return { x, y };
+}
+
+function latestRectWidthInOriginalPixels() {
+  if (!rectangles.length) return 0;
+  const r = rectangles[rectangles.length - 1];
+  const widthOnCanvasCssPx = Math.abs(r.x2 - r.x1);
+  // Convert to original image pixels (undo the image scaling)
+  const widthOriginalPx = widthOnCanvasCssPx / imgScale;
+  return widthOriginalPx;
+}
+
+function showNumbers({cm, m, ft}) {
+  numbers.innerHTML = `
+    <span class="pill">${cm.toFixed(2)} cm</span>
+    <span class="pill">${m.toFixed(2)} m</span>
+    <span class="pill">${ft.toFixed(2)} ft</span>
+  `;
+}
+
+// --------- Image load ----------
+imageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => { img.src = event.target.result; };
+  reader.readAsDataURL(file);
+});
+
+img.onload = function() {
+  setCanvasSizeForImage();
+  redraw();
+
+  // Ask for known real-world width once per image
+  const val = prompt("Enter real-world width of the object (in cm):");
+  realWidthCm = parseFloat(val);
+  if (!isFinite(realWidthCm) || realWidthCm <= 0) {
+    info.innerText = "Invalid width. Reload and enter a positive number in cm.";
+  } else {
+    info.innerText = "Drag (touch/mouse) to draw a rectangle tightly around that object width.";
+  }
+};
+
+// --------- Drawing (touch + mouse) ----------
+function startDraw(e) {
+  if (!img.src) return;
+  const p = getCanvasPos(e);
+  currentRect = { x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+  e.preventDefault?.();
+}
+function moveDraw(e) {
+  if (!currentRect) return;
+  const p = getCanvasPos(e);
+  currentRect.x2 = p.x;
+  currentRect.y2 = p.y;
+  redraw();
+  e.preventDefault?.();
+}
+function endDraw() {
+  if (currentRect) {
+    rectangles.push({ ...currentRect });
+    currentRect = null;
+    redraw();
+  }
+}
+
+canvas.addEventListener('touchstart', startDraw, { passive:false });
+canvas.addEventListener('touchmove',  moveDraw,  { passive:false });
+canvas.addEventListener('touchend',   endDraw);
+
+canvas.addEventListener('mousedown', startDraw);
+window.addEventListener('mousemove', moveDraw);
+window.addEventListener('mouseup',   endDraw);
+
+// --------- Buttons ----------
+undoBtn.addEventListener('click', () => {
+  rectangles.pop();
+  redraw();
+  info.innerText = rectangles.length ? "Last rectangle removed." : "All rectangles removed.";
+});
+
+clearBtn.addEventListener('click', () => {
+  rectangles = [];
+  redraw();
+  info.innerText = "Cleared. Draw again.";
+  numbers.innerHTML = "";
+});
+
+// Calculate distance using current focalLengthPx
+calculateBtn.addEventListener('click', () => {
+  if (!img.src || !rectangles.length || !realWidthCm) {
+    info.innerText = "Load image, enter object width, and draw a rectangle first.";
+    return;
+  }
+  const widthOriginalPx = latestRectWidthInOriginalPixels();
+  if (widthOriginalPx <= 0) {
+    info.innerText = "Rectangle width is zero. Draw again.";
     return;
   }
 
-  focalLength = (pixelWidth * knownDistance) / realWidth;
-  localStorage.setItem("focalLength", focalLength);
-  alert("Calibration done! Saved focal length = " + focalLength.toFixed(2));
-}
+  // Pinhole camera approximation:
+  //   distance = (RealWidth * FocalLength) / widthInPixels
+  const distanceCm = (realWidthCm * focalLengthPx) / widthOriginalPx;
+  const out = { cm: distanceCm, m: distanceCm / 100, ft: distanceCm / 30.48 };
+  showNumbers(out);
+  info.innerText = `Distance estimated (using focal length = ${focalLengthPx.toFixed(1)} px).`;
+});
 
-function calculateDistance() {
-  if (!focalLength) {
-    alert("Please calibrate first!");
+// Optional: Calibrate focal length using a known distance
+// Steps: draw rectangle around the same known-width object, then input real distance (cm).
+calibrateBtn.addEventListener('click', () => {
+  if (!img.src || !rectangles.length || !realWidthCm) {
+    info.innerText = "To calibrate: load image, enter object width (cm), draw a rectangle, then click Calibrate.";
+    return;
+  }
+  const distVal = prompt("Enter the real distance from camera to the object (in cm):");
+  const realDistanceCm = parseFloat(distVal);
+  if (!isFinite(realDistanceCm) || realDistanceCm <= 0) {
+    info.innerText = "Calibration cancelled: invalid distance.";
     return;
   }
 
-  const pixelWidth = Math.abs(endX - startX);
-  const realWidth = parseFloat(document.getElementById("realWidth").value);
-
-  if (pixelWidth <= 0 || realWidth <= 0) {
-    alert("Please draw rectangle and enter valid width.");
+  const widthOriginalPx = latestRectWidthInOriginalPixels();
+  if (widthOriginalPx <= 0) {
+    info.innerText = "Calibration cancelled: rectangle width is zero.";
     return;
   }
 
-  const distanceCm = (realWidth * focalLength) / pixelWidth;
-  const distanceM = distanceCm / 100;
-  const distanceFt = distanceCm / 30.48;
-
-  document.getElementById("result").innerHTML = 
-    `Distance: ${distanceCm.toFixed(2)} cm | ${distanceM.toFixed(2)} m | ${distanceFt.toFixed(2)} ft`;
-}
+  // From distance formula: F = (pixelWidth * distance) / realWidth
+  focalLengthPx = (widthOriginalPx * realDistanceCm) / realWidthCm;
+  info.innerText = `Calibrated! New focal length = ${focalLengthPx.toFixed(1)} px. Now click "Calculate Distance".`;
+});
 </script>
 </body>
 </html>
