@@ -70,22 +70,16 @@
 
   <div class="plan">
     <p><strong>Monthly Subscription</strong> – ₹100</p>
-    <a class="payBtn" 
-       href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=100&cu=INR&tn=Monthly+Subscription" 
-       data-plan="Monthly Subscription" 
-       data-amount="100">
-      <button class="btn">Pay ₹100</button>
-    </a>
+    <button class="btn payBtn" data-plan="Monthly Subscription" data-amount="100">
+      Pay ₹100
+    </button>
   </div>
 
   <div class="plan">
     <p><strong>Three Months Subscription</strong> – ₹61</p>
-    <a class="payBtn" 
-       href="upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=61&cu=INR&tn=3+Months+Subscription" 
-       data-plan="3 Months Subscription" 
-       data-amount="261">
-      <button class="btn">Pay ₹61</button>
-    </a>
+    <button class="btn payBtn" data-plan="3 Months Subscription" data-amount="61">
+      Pay ₹61
+    </button>
   </div>
 
   <!-- Popup Form -->
@@ -112,14 +106,21 @@
       localStorage.removeItem("paymentDone");
     });
 
-    // When a Pay button is clicked
+    // When Pay button is clicked
     document.querySelectorAll(".payBtn").forEach(btn => {
       btn.addEventListener("click", function() {
         selectedPlan = this.getAttribute("data-plan");
         selectedAmount = this.getAttribute("data-amount");
+
         localStorage.setItem("paymentStart", "true");
         localStorage.setItem("plan", selectedPlan);
         localStorage.setItem("amount", selectedAmount);
+
+        // Build UPI link dynamically
+        const upiLink = `upi://pay?pa=rajvendrarao@okhdfcbank&pn=Rajvendra+Singh+Rao&am=${selectedAmount}&cu=INR&tn=${encodeURIComponent(selectedPlan)}`;
+
+        // Open UPI app
+        window.location.href = upiLink;
       });
     });
 
