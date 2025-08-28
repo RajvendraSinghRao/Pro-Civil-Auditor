@@ -1,56 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Distance Measurement</title>
-  <style>
-    body { font-family: Arial; text-align: center; background: #f0f0f0; }
-    video { border: 2px solid black; }
-    canvas { position: absolute; top: 0; left: 0; }
-    #info { margin-top: 10px; font-size: 18px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distance Measurement</title>
+<style>
+  body { font-family: Arial; text-align: center; background: #f0f0f0; }
+  video, canvas { border: 2px solid black; margin-top: 10px; }
+  #info { margin-top: 10px; font-size: 18px; }
+</style>
 </head>
 <body>
-  <h2>Distance Measurement</h2>
-  <video id="video" width="640" height="480" autoplay></video>
-  <canvas id="canvas" width="640" height="480"></canvas>
-  <div id="info">Place your known object in front of the camera</div>
+<h2>Distance Measurement</h2>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const info = document.getElementById('info');
+<video id="video" width="640" height="480" autoplay></video>
+<br>
+<button id="captureBtn">Capture Image</button>
+<canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+<div id="info">Place your object in front of the camera and click Capture.</div>
 
-    // Known object width in cm (example: 8.5 cm for a card)
-    const KNOWN_WIDTH = 8.5; 
-    // Approximate camera focal length in pixels (rough estimate, calibrate if needed)
-    const FOCAL_LENGTH = 700; 
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const captureBtn = document.getElementById('captureBtn');
 
-    // Access webcam
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      video.srcObject = stream;
-    });
+// Rough focal length in pixels (calibrate for your camera if needed)
+const FOCAL_LENGTH = 700;
 
-    function detectObject() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+// Start webcam
+navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+  video.srcObject = stream;
+});
 
-      // For demo, we ask user to select the object manually by drawing rectangle
-      // In real app, you can use OpenCV.js for object/marker detection
-
-      // Here, we'll simulate detecting object width in pixels
-      // Replace this with real detection
-      const objectWidthInPixels = 100; // Change based on detection
-
-      // Calculate distance
-      const distance = (KNOWN_WIDTH * FOCAL_LENGTH) / objectWidthInPixels;
-      info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
-
-      requestAnimationFrame(detectObject);
-    }
-
-    detectObject();
-  </script>
+// Capture image
+captureBtn.addEventListener('click', () => {
+  canvas.style.display = 'block';
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  video.style.display = 'none';
+  captureBtn.style.display = 'none';
+  info.innerText = 'Enter real-world width of the object (cm):';
+  
+  // Ask for real object width
+  const realWidth = parseFloat(prompt("Enter real-world width of the object in cm:"));
+  
+  if (isNaN(realWidth) || realWidth <= 0) {
+    info.innerText = "Invalid width entered. Reload page to try again.";
+    return;
+  }
+  
+  info.innerText = "Draw rectangle around the object on the image.";
+  
+  // Let user draw rectangle on canvas
+  let startX, startY, endX, endY, isDrawing = false;
+  
+  canvas.onmousedown = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    startX = e.clientX - rect.left;
+    startY = e.clientY - rect.top;
+    isDrawing = true;
+  };
+  
+  canvas.onmousemove = (e) => {
+    if (!isDrawing) return;
+    const rect = canvas.getBoundingClientRect();
+    endX = e.clientX - rect.left;
+    endY = e.clientY - rect.top;
+    // Draw rectangle
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // redraw image
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(startX, startY, endX-startX, endY-startY);
+  };
+  
+  canvas.onmouseup = () => {
+    isDrawing = false;
+    const pixelWidth = Math.abs(endX - startX);
+    const distance = (realWidth * FOCAL_LENGTH) / pixelWidth;
+    info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
+  };
+});
+</script>
 </body>
 </html>
