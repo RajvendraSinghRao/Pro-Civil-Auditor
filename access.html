@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access - Pro Civil Auditor</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #0f3d66;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #fff;
+      color: #0f3d66;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h2>You have access 🎉</h2>
+  <button class="btn" onclick="getAccess()">Get Access</button>
+
+  <script>
+    function getAccess() {
+      // Set subscribed in localStorage
+      localStorage.setItem("subscribed", "true");
+      // Redirect to index.html
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
