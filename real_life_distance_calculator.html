@@ -83,21 +83,24 @@ const info = document.getElementById('info');
 const captureBtn = document.getElementById('captureBtn');
 const resetBtn = document.getElementById('resetBtn');
 
-// Rough focal length in pixels (can be calibrated for accuracy)
-const FOCAL_LENGTH = 700;
+const FOCAL_LENGTH = 700; // Rough focal length in pixels
+let capturedImage = null;
+let startX, startY, isDrawing = false;
 
 // Start front camera
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
   .then(stream => video.srcObject = stream)
   .catch(err => alert('Error accessing webcam: ' + err));
 
-let startX, startY, isDrawing = false;
-
 captureBtn.addEventListener('click', () => {
   canvas.style.display = 'block';
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
+
+  // Store captured image
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  capturedImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
   video.style.display = 'none';
   captureBtn.style.display = 'none';
   resetBtn.style.display = 'inline-block';
@@ -124,10 +127,15 @@ captureBtn.addEventListener('click', () => {
     const touch = e.touches[0];
     const currentX = touch.clientX - rect.left;
     const currentY = touch.clientY - rect.top;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Redraw captured image
+    ctx.putImageData(capturedImage, 0, 0);
+
+    // Draw rectangle
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 3;
     ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+
     e.preventDefault();
   }, { passive: false });
 
@@ -137,12 +145,19 @@ captureBtn.addEventListener('click', () => {
     const touch = e.changedTouches[0];
     const endX = touch.clientX - rect.left;
     const pixelWidth = Math.abs(endX - startX);
-    const distance = (realWidth * FOCAL_LENGTH) / pixelWidth;
-    info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
+
+    // Calculate distances
+    const distanceCm = (realWidth * FOCAL_LENGTH) / pixelWidth;
+    const distanceMeters = distanceCm / 100;
+    const distanceFeet = distanceCm / 30.48;
+
+    info.innerText = `Distance:\n${distanceCm.toFixed(2)} cm | ${distanceMeters.toFixed(2)} m | ${distanceFeet.toFixed(2)} ft`;
+
     isDrawing = false;
   });
 });
 
+// Reset button
 resetBtn.addEventListener('click', () => {
   video.style.display = 'block';
   canvas.style.display = 'none';
@@ -154,4 +169,3 @@ resetBtn.addEventListener('click', () => {
 
 </body>
 </html>
-
