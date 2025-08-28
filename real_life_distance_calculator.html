@@ -1,110 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Free Live Walking Distance Tracker</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-body { font-family: Arial, sans-serif; max-width: 800px; margin:auto; padding:20px; background:#f0f2f5; }
-h2 { text-align:center; color:#333; }
-button {
-  padding:12px 20px; margin:10px 5px 20px 0; font-size:16px;
-  border:none; border-radius:6px; cursor:pointer; background:#007BFF; color:white; transition:0.3s;
-}
-button:hover { background:#0056b3; }
-#map { width: 100%; height: 500px; border-radius:8px; }
-#info { background:white; padding:15px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distance Measurement</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #f0f0f0; }
+    video { border: 2px solid black; }
+    canvas { position: absolute; top: 0; left: 0; }
+    #info { margin-top: 10px; font-size: 18px; }
+  </style>
 </head>
 <body>
+  <h2>Distance Measurement</h2>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <div id="info">Place your known object in front of the camera</div>
 
-<h2>Live Walking Distance Tracker (Free)</h2>
-<button id="startBtn">Start Walking</button>
-<button id="stopBtn" disabled>Stop</button>
-<div id="info">
-  <p><strong>Distance:</strong> <span id="distance">0</span> meters / <span id="distanceFeet">0</span></p>
-</div>
-<div id="map"></div>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const info = document.getElementById('info');
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// Initialize map
-let map = L.map('map').fitWorld();
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-}).addTo(map);
+    // Known object width in cm (example: 8.5 cm for a card)
+    const KNOWN_WIDTH = 8.5; 
+    // Approximate camera focal length in pixels (rough estimate, calibrate if needed)
+    const FOCAL_LENGTH = 700; 
 
-let path = [];
-let polyline = L.polyline([], {color:'red'}).addTo(map);
-let watchID;
-let totalDistance = 0;
+    // Access webcam
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+    });
 
-// Convert meters to feet/inches
-function metersToFeetInches(meters){
-    const totalInches = meters*39.3701;
-    const feet = Math.floor(totalInches/12);
-    const inches = (totalInches%12).toFixed(2);
-    return `${feet}' ${inches}"`;
-}
+    function detectObject() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-// Haversine distance
-function getDistance(lat1, lon1, lat2, lon2){
-    const R = 6371e3; // meters
-    const φ1 = lat1*Math.PI/180;
-    const φ2 = lat2*Math.PI/180;
-    const Δφ = (lat2-lat1)*Math.PI/180;
-    const Δλ = (lon2-lon1)*Math.PI/180;
-    const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-    const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R*c;
-}
+      // For demo, we ask user to select the object manually by drawing rectangle
+      // In real app, you can use OpenCV.js for object/marker detection
 
-// Update info
-function updateInfo() {
-    document.getElementById('distance').innerText = totalDistance.toFixed(2);
-    document.getElementById('distanceFeet').innerText = metersToFeetInches(totalDistance);
-}
+      // Here, we'll simulate detecting object width in pixels
+      // Replace this with real detection
+      const objectWidthInPixels = 100; // Change based on detection
 
-// Start walking
-document.getElementById('startBtn').addEventListener('click', ()=>{
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(pos=>{
-            const {latitude, longitude} = pos.coords;
-            map.setView([latitude, longitude], 18);
-            path.push([latitude, longitude]);
-            polyline.setLatLngs(path);
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
+      // Calculate distance
+      const distance = (KNOWN_WIDTH * FOCAL_LENGTH) / objectWidthInPixels;
+      info.innerText = `Approx. Distance: ${distance.toFixed(2)} cm`;
 
-            watchID = navigator.geolocation.watchPosition(position=>{
-                const newPoint = [position.coords.latitude, position.coords.longitude];
-                const lastPoint = path[path.length-1];
-                const distance = getDistance(lastPoint[0], lastPoint[1], newPoint[0], newPoint[1]);
-                totalDistance += distance;
-                path.push(newPoint);
-                polyline.setLatLngs(path);
-                map.panTo(newPoint);
-                updateInfo();
-            }, err=>{
-                alert("Error getting location: " + err.message);
-            }, {enableHighAccuracy:true, maximumAge:0, timeout:5000});
-
-        }, err=>{
-            alert("Error getting location: " + err.message);
-        }, {enableHighAccuracy:true});
-    } else {
-        alert("Geolocation not supported.");
+      requestAnimationFrame(detectObject);
     }
-});
 
-// Stop walking
-document.getElementById('stopBtn').addEventListener('click', ()=>{
-    if(watchID) navigator.geolocation.clearWatch(watchID);
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
-});
-</script>
-
+    detectObject();
+  </script>
 </body>
 </html>
